@@ -592,14 +592,12 @@
   @media(max-width:768px){
     .hero-visual::after{content:none}
     .hero-visual{
-      /* folga no topo E nas laterais: o card rotacionado (1.5deg) transborda a caixa
-         e o Safari corta o que fica fora da area mascarada */
-      width:calc(100% + 20px);max-width:calc(100% + 20px);
-      padding:12px 10px 0;
-      margin-top:-12px;margin-left:-10px;margin-right:-10px;
       -webkit-mask-image:linear-gradient(180deg,#000 0%,#000 60%,rgba(0,0,0,0) 96%);
       mask-image:linear-gradient(180deg,#000 0%,#000 60%,rgba(0,0,0,0) 96%);
     }
+    /* sem rotacao no mobile: o card preenche exatamente a caixa da mascara,
+       entao nao existe canto transbordando para ser cortado */
+    .hero-visual .mockup{transform:none}
   }
 </style>
 </head>
