@@ -279,22 +279,22 @@
   @media(max-width:768px){
     .hero{padding-top:clamp(84px,10.5vh,100px)}
     .hero-grid{gap:0}
-    .hero-visual{order:-1;position:relative;z-index:0;margin-top:0;margin-bottom:-82px;max-width:258px}
+    .hero-visual{order:-1;position:relative;z-index:0;margin-top:0;margin-bottom:-82px;max-width:100%;width:100%}
     .hero-copy{position:relative;z-index:10}
     /* card compacto: primeira dobra mostra card + headline juntos */
-    .mockup{padding:16px 15px 13px}
-    .mockup-tag{font-size:9px;margin-bottom:8px}
-    .mockup-title{font-size:18px}
+    .mockup{padding:18px 16px 14px}
+    .mockup-tag{font-size:clamp(9px,2.5vw,10.5px);margin-bottom:8px;padding-right:50%}
+    .mockup-title{font-size:clamp(19px,5.4vw,24px);padding-right:2px}
     .mockup-scale{margin:10px 0 8px}
     .mockup-rows{gap:5px}
     .mockup-row{
-      padding:7px 10px;font-size:10px;gap:8px;border-radius:7px;
+      padding:8px 12px;font-size:clamp(11px,3vw,13px);gap:9px;border-radius:8px;
       white-space:nowrap;min-width:0;max-width:100%;overflow:hidden;
     }
     .mockup-row:nth-child(3),.mockup-row:nth-child(4){display:none}
     .mockup-row svg{width:12px;height:12px}
     .mockup-row .dur{display:none}
-    .hero-visual .mockup .mockup-float{padding:7px 11px;font-size:10px;top:-10px}
+    .hero-visual .mockup .mockup-float{padding:7px 12px;font-size:clamp(10px,2.8vw,12px)}
     .hero-badge{margin-bottom:10px;padding:6px 12px;font-size:11px}
     .hero h1{font-size:33px}
     .hero .sub{font-size:15.5px;margin:12px 0 4px}
@@ -310,7 +310,7 @@
       pointer-events:none;z-index:1;
     }
     /* selo "10 modulos" sobe para nao cair na zona de sobreposicao */
-    .hero-visual .mockup .mockup-float{bottom:auto;top:-12px;right:-6px;transform:rotate(2deg)}
+    .hero-visual .mockup .mockup-float{bottom:auto;top:10px;right:10px;transform:rotate(2deg)}
   }
 
   /* ===== Card interativo dos modulos (showcase) ===== */
@@ -592,8 +592,6 @@
   @media(max-width:768px){
     .hero-visual::after{content:none}
     .hero-visual{
-      /* o padding embute o selo (que transborda o topo) dentro da area mascarada */
-      padding-top:28px;margin-top:-28px;
       -webkit-mask-image:linear-gradient(180deg,#000 0%,#000 60%,rgba(0,0,0,0) 96%);
       mask-image:linear-gradient(180deg,#000 0%,#000 60%,rgba(0,0,0,0) 96%);
     }
