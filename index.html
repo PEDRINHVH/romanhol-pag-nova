@@ -591,13 +591,12 @@
   /* Fade do card do hero via mascara: dissolve de verdade, sem retangulo de cor */
   @media(max-width:768px){
     .hero-visual::after{content:none}
-    .hero-visual{
-      -webkit-mask-image:linear-gradient(180deg,#000 0%,#000 60%,rgba(0,0,0,0) 96%);
-      mask-image:linear-gradient(180deg,#000 0%,#000 60%,rgba(0,0,0,0) 96%);
+    /* fade aplicado NO card: a mascara gira junto com ele,
+       entao nenhuma borda fica fora da area visivel */
+    .hero-visual .mockup{
+      -webkit-mask-image:linear-gradient(180deg,#000 0%,#000 62%,rgba(0,0,0,0) 97%);
+      mask-image:linear-gradient(180deg,#000 0%,#000 62%,rgba(0,0,0,0) 97%);
     }
-    /* sem rotacao no mobile: o card preenche exatamente a caixa da mascara,
-       entao nao existe canto transbordando para ser cortado */
-    .hero-visual .mockup{transform:none}
   }
 </style>
 </head>
