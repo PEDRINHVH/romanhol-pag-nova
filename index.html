@@ -585,7 +585,7 @@
   @media(max-width:768px){
     .hero-ctas{flex-direction:column;align-items:stretch;gap:10px}
     .hero-ctas .btn{width:100%;justify-content:center}
-    .hero-copy .btn-note{margin-top:14px}
+    .hero-copy .btn-note{margin-top:26px}
   }
 
   /* Fade do card do hero via mascara: dissolve de verdade, sem retangulo de cor */
@@ -1147,6 +1147,12 @@
         .from('.mockup',{y:44,opacity:0,rotation:4.5,duration:.9},'-=.85')
         .from('.mockup-row',{y:14,opacity:0,duration:.4,stagger:.08},'-=.5')
         .from('.mockup-float',{scale:.6,opacity:0,duration:.5,ease:'back.out(1.7)'},'-=.25');
+
+      // Ao concluir, remove os estilos inline da entrada: nenhum residuo de
+      // transform pode deslocar botoes/textos do lugar definido pelo CSS
+      tl.eventCallback('onComplete',function(){
+        gsap.set(['.hero-badge','.hero h1','.hero .sub','.hero .byline','.hero-ctas > *','.hero-trust .trust-item','.mockup-row','.mockup-float'],{clearProps:'transform,opacity'});
+      });
 
       // --- Parallax sutil no mockup ---
       gsap.to('.mockup',{yPercent:-7,ease:'none',
