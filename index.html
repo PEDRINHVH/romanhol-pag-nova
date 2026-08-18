@@ -592,6 +592,8 @@
   @media(max-width:768px){
     .hero-visual::after{content:none}
     .hero-visual{
+      /* folga superior: os cantos do card rotacionado (1.5deg) ficam dentro da area mascarada */
+      padding-top:12px;margin-top:-12px;
       -webkit-mask-image:linear-gradient(180deg,#000 0%,#000 60%,rgba(0,0,0,0) 96%);
       mask-image:linear-gradient(180deg,#000 0%,#000 60%,rgba(0,0,0,0) 96%);
     }
