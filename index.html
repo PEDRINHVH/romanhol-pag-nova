@@ -592,8 +592,10 @@
   @media(max-width:768px){
     .hero-visual::after{content:none}
     .hero-visual{
-      -webkit-mask-image:linear-gradient(180deg,#000 0%,#000 58%,rgba(0,0,0,0) 96%);
-      mask-image:linear-gradient(180deg,#000 0%,#000 58%,rgba(0,0,0,0) 96%);
+      /* o padding embute o selo (que transborda o topo) dentro da area mascarada */
+      padding-top:28px;margin-top:-28px;
+      -webkit-mask-image:linear-gradient(180deg,#000 0%,#000 60%,rgba(0,0,0,0) 96%);
+      mask-image:linear-gradient(180deg,#000 0%,#000 60%,rgba(0,0,0,0) 96%);
     }
   }
 </style>
