@@ -4,7 +4,7 @@ import { storefrontOrigin } from '../worker/storefront-origin.mjs';
 import { handleTrackingRequest } from '../worker/tracking.mjs';
 
 const backend = 'https://nolimit-capacetes.tarcalmix.chatgpt.site';
-const origins = [backend, 'https://nolimitemotors.com', 'https://www.nolimitemotors.com'];
+const origins = [backend, 'https://nolimitemotos.com', 'https://www.nolimitemotos.com'];
 const env = { META_ACCESS_TOKEN: 'fake', META_PIXEL_ID: '12345', META_API_VERSION: 'v26.0' };
 function request(origin, source = origin, consent = true) {
   return new Request(backend + '/api/events', {
@@ -27,7 +27,7 @@ test('tracking accepts the original site and exact approved storefronts with the
 });
 
 test('tracking rejects unknown, lookalike, HTTP, subdomain, port and missing origins', async () => {
-  for (const origin of ['https://evil.test', 'https://nolimitemotors.com.evil.test', 'http://nolimitemotors.com', 'https://other.nolimitemotors.com', 'https://nolimitemotors.com:444', 'null', '']) {
+  for (const origin of ['https://evil.test', 'https://nolimitemotos.com.evil.test', 'http://nolimitemotos.com', 'https://other.nolimitemotos.com', 'https://nolimitemotos.com:444', 'https://nolimitemotors.com', 'https://www.nolimitemotors.com', 'null', '']) {
     const req = request(origin);
     assert.equal(storefrontOrigin(req), null);
     assert.equal((await handleTrackingRequest(req, env)).status, 403);

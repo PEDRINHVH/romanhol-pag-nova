@@ -83,7 +83,7 @@ test('Pix creation uses server total, physical address, seed mapping and sanitiz
 });
 
 test('approved storefronts preserve checkout source and backend postback without proxy IP', async () => {
-  for (const storefront of [origin, 'https://nolimitemotors.com', 'https://www.nolimitemotors.com']) {
+  for (const storefront of [origin, 'https://nolimitemotos.com', 'https://www.nolimitemotos.com']) {
     const f = fixture();
     const body = input();
     body.tracking = { consent: true, eventSourceUrl: storefront + '/produto/capacete?email=private' };
@@ -100,7 +100,7 @@ test('approved storefronts preserve checkout source and backend postback without
 
 test('checkout denies non-approved storefront origins before payment dispatch', async () => {
   const f = fixture();
-  for (const invalid of ['https://evil.example', 'https://nolimitemotors.com.evil.example', 'http://nolimitemotors.com', 'https://other.nolimitemotors.com']) {
+  for (const invalid of ['https://evil.example', 'https://nolimitemotos.com.evil.example', 'http://nolimitemotos.com', 'https://other.nolimitemotos.com', 'https://nolimitemotors.com', 'https://www.nolimitemotors.com']) {
     assert.equal((await f.request('/api/checkout', input(), 'POST', { origin: invalid })).status, 403);
   }
   assert.equal(f.state.posts.length, 0);
@@ -126,7 +126,7 @@ test('concurrent requests sharing one idempotency key dispatch only one payment'
 
 test('on-demand physical product registration reuses returned default offer and persists mapping', async () => {
   const f = fixture(); const original = f.env.PAYMENT_FETCH; let productsCreated = 0;
-  const storefront = 'https://nolimitemotors.com';
+  const storefront = 'https://nolimitemotos.com';
   f.env.PAYMENT_FETCH = async (url, options) => {
     if (new URL(url).pathname.endsWith('/products')) {
       productsCreated++;

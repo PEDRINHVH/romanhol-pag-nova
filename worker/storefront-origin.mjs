@@ -1,6 +1,6 @@
 const STOREFRONT_ORIGINS = new Set([
-  'https://nolimitemotors.com',
-  'https://www.nolimitemotors.com',
+  'https://nolimitemotos.com',
+  'https://www.nolimitemotos.com',
 ]);
 
 export function storefrontOrigin(request) {
