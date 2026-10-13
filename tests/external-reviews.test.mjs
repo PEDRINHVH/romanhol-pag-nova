@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { razorOpinions, photoOpinions, renderExternalReviews } from '../public/external-reviews.mjs';
+import { razorOpinions, photoOpinions, renderExternalReviews } from '../public/external-reviews.js';
 import { existsSync } from 'node:fs';
 
 test('external opinions appear only on helmet product pages', () => {

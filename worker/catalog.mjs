@@ -1,5 +1,5 @@
 import catalog from '../public/data/catalog.json' with { type: 'json' };
-import { normalizeProducts, priceOf } from '../public/catalog-utils.mjs';
+import { normalizeProducts, priceOf } from '../public/catalog-utils.js';
 
 const products = new Map(normalizeProducts(catalog).map(product => [product.id, product]));
 export function checkoutItems(input) {

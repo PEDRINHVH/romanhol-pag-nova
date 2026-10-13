@@ -1,4 +1,4 @@
-import {escapeHTML as e, money, priceOf} from './catalog-utils.mjs';
+import {escapeHTML as e, money, priceOf} from './catalog-utils.js';
 
 const sessionKey = 'nolimit:checkout:attempt';
 const readAttempt = () => {try {return JSON.parse(sessionStorage.getItem(sessionKey));} catch {return null;}};
@@ -43,7 +43,7 @@ const refresh=()=>hooks?.render({preserveScroll:true});
 async function prepareQr() {
   if(!order?.pix?.code || qrCode===order.pix.code)return;
   qrCode=order.pix.code;
-  try {const {default:QRCode}=await import('./vendor/qr-code.mjs');qrImage=await QRCode.toDataURL(qrCode,{width:256,margin:2,errorCorrectionLevel:'M',color:{dark:'#101828',light:'#ffffff'}});refresh();} catch {qrCode='';message='Use o código copia e cola para pagar este Pix.';refresh();}
+  try {const {default:QRCode}=await import('./vendor/qr-code.js');qrImage=await QRCode.toDataURL(qrCode,{width:256,margin:2,errorCorrectionLevel:'M',color:{dark:'#101828',light:'#ffffff'}});refresh();} catch {qrCode='';message='Use o código copia e cola para pagar este Pix.';refresh();}
 }
 async function checkOrder() {
   if(!attempt?.orderId || pollRunning)return;

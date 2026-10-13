@@ -1,5 +1,5 @@
-import { escapeHTML as escape } from './catalog-utils.mjs';
-import { reviewPhotos } from './review-photos.mjs';
+import { escapeHTML as escape } from './catalog-utils.js';
+import { reviewPhotos } from './review-photos.js';
 
 export const reviewSource = 'https://www.mercadolivre.com.br/capacete-integral-norisk-razor-preto-fosco-monocolor-tamanho-58/p/MLB61810688';
 

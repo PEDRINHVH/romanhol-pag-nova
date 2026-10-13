@@ -1,10 +1,10 @@
-import {money,escapeHTML as e,normalize,brandText,isForce,priceOf,values,facetValues,clearedFilters,filterProducts,productImage,approvedImageIndex,itemCountLabel,findProductByPath,normalizeProducts} from './catalog-utils.mjs';
-import {visorBump} from './visor-ui.mjs';
-import {visorOffers} from './visor-utils.mjs';
-import {checkoutPage,configureCheckout,mountCheckout,snapshotCheckoutForm} from './checkout.mjs';
-import {createTracker} from './tracking.mjs';
-import {renderSizeGuide,mountSizeGuide} from './size-guide.mjs';
-import {renderExternalReviews} from './external-reviews.mjs';
+import {money,escapeHTML as e,normalize,brandText,isForce,priceOf,values,facetValues,clearedFilters,filterProducts,productImage,approvedImageIndex,itemCountLabel,findProductByPath,normalizeProducts} from './catalog-utils.js';
+import {visorBump} from './visor-ui.js';
+import {visorOffers} from './visor-utils.js';
+import {checkoutPage,configureCheckout,mountCheckout,snapshotCheckoutForm} from './checkout.js';
+import {createTracker} from './tracking.js';
+import {renderSizeGuide,mountSizeGuide} from './size-guide.js';
+import {renderExternalReviews} from './external-reviews.js';
 const tracker=createTracker();
 let lastTrackedRoute='';
 const trackingItems=()=>cart.map(line=>({id:line.id,quantity:line.qty,unitPriceCents:Math.round(priceOf(products.find(p=>p.id===line.id),line.size)*100)}));

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { parseHeadMeasurement, renderSizeGuide, mountSizeGuide } from '../public/size-guide.mjs';
+import { parseHeadMeasurement, renderSizeGuide, mountSizeGuide } from '../public/size-guide.js';
 
 test('measurement accepts decimal comma/dot without accepting units, malformed values or negatives', () => {
   assert.equal(parseHeadMeasurement(' 58,5 '), 58.5);

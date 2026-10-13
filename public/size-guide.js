@@ -1,4 +1,4 @@
-import { escapeHTML as escape } from './catalog-utils.mjs';
+import { escapeHTML as escape } from './catalog-utils.js';
 
 const mounted = new WeakSet();
 const nominalLabels = product => [...new Set((product?.variants || []).map(variant => String(variant.size || '').trim()).filter(Boolean))];

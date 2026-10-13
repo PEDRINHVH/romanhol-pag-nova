@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { buildMetaEvent, buildUtmifyOrder, sendOrderTracking, handleTrackingRequest, purchaseEventId } from '../worker/tracking.mjs';
-import { createTracker, captureAttribution } from '../public/tracking.mjs';
+import { createTracker, captureAttribution } from '../public/tracking.js';
 const env = { META_ACCESS_TOKEN: 'test-token', META_PIXEL_ID: '1146535704713953', META_API_VERSION: 'v26.0', UTMIFY_API_TOKEN: 'test-utm' };
 const tracking = { consent: true, eventSourceUrl: 'https://shop.test/product?email=private', attribution: { utm_source: 'facebook', utm_campaign: 'launch' }, fbc: 'fb.1.1700000000000.click' };
 const order = { id: 'order-1', status: 'waiting_payment', createdAt: '2026-10-12T10:00:00Z', totalCents: 9990, items: [{ id: 'helmet', name: 'Capacete', quantity: 2, unitPriceCents: 4995 }], customer: { name: 'Cliente Teste', email: ' TEST@EXAMPLE.COM ', phone: '(11) 99999-0000', document: '123.456.789-00' }, tracking };

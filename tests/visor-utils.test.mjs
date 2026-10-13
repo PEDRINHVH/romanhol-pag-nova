@@ -1,9 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {visorColor, visorOffers} from '../public/visor-utils.mjs';
-import {visorBump} from '../public/visor-ui.mjs';
-import {priceOf} from '../public/catalog-utils.mjs';
+import {visorColor, visorOffers} from '../public/visor-utils.js';
+import {visorBump} from '../public/visor-ui.js';
+import {priceOf} from '../public/catalog-utils.js';
 
 const helmet = (model, id = model) => ({id, model, category:'capacetes'});
 const visor = (overrides = {}) => ({id:'visor', name:'VISEIRA FUMÊ CAPACETE FORCE', model:'FORCE', category:'acessorios', subcategory:'viseiras', price:23.97, variants:[{id:'sku', size:'ÚNICO', available:null}], ...overrides});

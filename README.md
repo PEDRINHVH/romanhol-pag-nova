@@ -16,7 +16,7 @@ O banner tem altura reduzida e os cartões de modelos usam fotos do catálogo. V
 
 Ao adicionar um produto ou uma viseira pela página do produto, a loja redireciona automaticamente para o checkout. A escolha de tamanho continua obrigatória. Adicionais escolhidos na sacola ou no checkout atualizam a seleção na própria página.
 
-`public/visor-utils.mjs` cruza modelos exatos do catálogo para oferecer somente viseiras externas coloridas compatíveis. Há opções para Carbon R, City, Flow, Force, Razor, Route e Strada II. Force II e outros modelos sem correspondência aguardam cadastro confirmado; Force não é tratado como Force II. A disponibilidade usa os dados do catálogo; não existe sincronização contínua de estoque do fornecedor.
+`public/visor-utils.js` cruza modelos exatos do catálogo para oferecer somente viseiras externas coloridas compatíveis. Há opções para Carbon R, City, Flow, Force, Razor, Route e Strada II. Force II e outros modelos sem correspondência aguardam cadastro confirmado; Force não é tratado como Force II. A disponibilidade usa os dados do catálogo; não existe sincronização contínua de estoque do fornecedor.
 
 ## Catálogo e preços
 

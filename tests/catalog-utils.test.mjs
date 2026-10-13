@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {filterProducts,priceOf,productImage,approvedImageIndex,itemCountLabel,findProductByPath,normalizeProducts,facetValues,clearedFilters} from '../public/catalog-utils.mjs';
+import {filterProducts,priceOf,productImage,approvedImageIndex,itemCountLabel,findProductByPath,normalizeProducts,facetValues,clearedFilters} from '../public/catalog-utils.js';
 const products = [{id:'1',name:'Capacete FORCE II',model:'Force II',price:599,color:'Preto',category:'capacetes',variants:[{size:'58'}]},{id:'2',name:'Jaqueta',price:220,category:'vestuario',variants:[{size:'M'}]}];
 test('Force II uses the fixed launch price',()=>assert.equal(priceOf(products[0]),179.90));
 test('search, size and category combine',()=>assert.deepEqual(filterProducts(products,{q:'capacête',size:'58',category:'capacetes'}),[products[0]]));

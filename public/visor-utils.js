@@ -1,4 +1,4 @@
-import {normalize, priceOf} from './catalog-utils.mjs';
+import {normalize, priceOf} from './catalog-utils.js';
 
 const modelKey = value => normalize(value).trim().replace(/\s+/g, ' ');
 const compare = (a, b) => String(a).localeCompare(String(b), 'pt-BR', {numeric:true});
