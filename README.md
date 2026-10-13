@@ -6,7 +6,9 @@ Loja responsiva em português, com 399 produtos e 1.421 variações do catálogo
 
 Execute `npm ci` e `npm run preview:local`, depois abra `http://127.0.0.1:5173`. O preview usa o mesmo backend de pagamentos, SQLite persistente em `.local/` e credenciais de `.env.local`. A UTMify recebe pedidos de teste nesse preview; a geração do Pix é real e não executa pagamento.
 
-Produção: `npm run build` gera o Worker em `dist/server` e os arquivos públicos em `dist/client`. O Site usa D1 (`DB`) e migrações de estrutura em `drizzle/`. Segredos são configurados no ambiente do servidor, nunca no navegador ou no Git.
+Na Hostinger, selecione **Next.js**, Node.js **22 ou 24**, raiz do projeto `./` e comando de compilação `npm run build`. O build gera `.next/standalone/server.js`, com o catálogo e as imagens incluídos. Use `npm start` se o painel solicitar um comando de inicialização; `PORT` e `HOSTNAME` são lidos pelo servidor Next.js. Não configure `dist` como saída: a implantação utiliza a saída padrão `.next` do Next.js.
+
+O frontend em `nolimitemotors.com` encaminha `/api/*` ao backend publicado em `https://nolimit-capacetes.tarcalmix.chatgpt.site`. Esse backend mantém pagamentos, integrações, pedidos e o banco D1 (`DB`); suas credenciais permanecem no ambiente do servidor atual. Não é necessário copiar chaves para a Hostinger neste modelo. O backend deve continuar publicado e acessível. O domínio principal e `www` são permitidos explicitamente; um domínio temporário diferente precisa ser cadastrado antes de usar checkout ou tracking.
 
 O site inclui catálogo, busca, filtros, ordenação, páginas de produtos, galerias ampliadas, escolha de tamanho, favoritos e sacola persistente no navegador. As rotas usam hash para funcionar em hospedagem estática.
 
@@ -52,7 +54,7 @@ Revisão mobile: início, catálogo, produto, sacola e checkout verificados em f
 
 - `public/`: frontend editável e imagens.
 - `worker/`: pagamentos e acompanhamento no servidor.
-- `dist/`: build gerado para hospedagem (não editar).
+- `.next/standalone/`: servidor Next.js gerado para a Hostinger (não editar).
 - `scripts/`: importação, projeção do catálogo e preparação das fotos.
 - `.openai/hosting.json`: identidade do Site e configuração de publicação.
 - `../output/no-limite/`: identidade visual final, com logos e guia.

@@ -27,9 +27,9 @@ function fixture() {
     },
     async TRACKING_FETCH(url, options) { state.tracking.push({ url, body: JSON.parse(options.body) }); return Response.json({}, { status: state.metaFail && url.includes('facebook') ? 503 : 200 }); },
   };
-  async function request(path, body, method = body ? 'POST' : 'GET') {
+  async function request(path, body, method = body ? 'POST' : 'GET', headers = {}) {
     const pending = [];
-    const response = await handlePaymentRequest(new Request(origin + path, { method, headers: { origin, 'content-type': 'application/json' }, ...(body ? { body: JSON.stringify(body) } : {}) }), env, { waitUntil: promise => pending.push(promise) });
+    const response = await handlePaymentRequest(new Request(origin + path, { method, headers: { origin, 'content-type': 'application/json', ...headers }, ...(body ? { body: JSON.stringify(body) } : {}) }), env, { waitUntil: promise => pending.push(promise) });
     await Promise.all(pending);
     return { status: response.status, body: await response.json() };
   }
@@ -82,6 +82,30 @@ test('Pix creation uses server total, physical address, seed mapping and sanitiz
   assert.equal(sent.postback_url, origin + '/api/payment/postback');
 });
 
+test('approved storefronts preserve checkout source and backend postback without proxy IP', async () => {
+  for (const storefront of [origin, 'https://nolimitemotors.com', 'https://www.nolimitemotors.com']) {
+    const f = fixture();
+    const body = input();
+    body.tracking = { consent: true, eventSourceUrl: storefront + '/produto/capacete?email=private' };
+    const result = await f.request('/api/checkout', body, 'POST', { origin: storefront, 'cf-connecting-ip': '192.0.2.1', 'x-forwarded-for': '198.51.100.1', 'user-agent': 'buyer-agent' });
+    assert.equal(result.status, 201);
+    const saved = JSON.parse(f.sqlite.prepare('SELECT data_json FROM payment_orders').get().data_json);
+    assert.equal(saved.tracking.eventSourceUrl, storefront + '/produto/capacete');
+    assert.equal(saved.userAgent, 'buyer-agent');
+    assert.equal(f.state.posts[0].postback_url, origin + '/api/payment/postback');
+    assert.equal(f.state.tracking[0].body.customer.ip, storefront === origin ? '192.0.2.1' : undefined);
+    assert.equal(saved.clientIp, storefront === origin ? '192.0.2.1' : '');
+  }
+});
+
+test('checkout denies non-approved storefront origins before payment dispatch', async () => {
+  const f = fixture();
+  for (const invalid of ['https://evil.example', 'https://nolimitemotors.com.evil.example', 'http://nolimitemotors.com', 'https://other.nolimitemotors.com']) {
+    assert.equal((await f.request('/api/checkout', input(), 'POST', { origin: invalid })).status, 403);
+  }
+  assert.equal(f.state.posts.length, 0);
+});
+
 test('idempotency returns same order once and rejects a changed cart', async () => {
   const f = fixture(); const body = input();
   const first = await f.request('/api/checkout', body);
@@ -102,6 +126,7 @@ test('concurrent requests sharing one idempotency key dispatch only one payment'
 
 test('on-demand physical product registration reuses returned default offer and persists mapping', async () => {
   const f = fixture(); const original = f.env.PAYMENT_FETCH; let productsCreated = 0;
+  const storefront = 'https://nolimitemotors.com';
   f.env.PAYMENT_FETCH = async (url, options) => {
     if (new URL(url).pathname.endsWith('/products')) {
       productsCreated++;
@@ -110,14 +135,14 @@ test('on-demand physical product registration reuses returned default offer and 
       assert.equal(product.id_category, 6);
       assert.equal(product.amount, 21041);
       assert.ok(product.cover.startsWith('https://'));
-      assert.ok(product.sale_page.startsWith(origin + '/produto/'));
+      assert.ok(product.sale_page.startsWith(storefront + '/produto/'));
       return Response.json({ hash: 'own675', offers: [{ hash: 'offer675', status: 1 }] });
     }
     return original(url, options);
   };
   f.state.amount = f.state.createAmount = 21041;
   const body = input(); body.items = [{ id: '675', size: '54/XS', quantity: 1 }];
-  const result = await f.request('/api/checkout', body);
+  const result = await f.request('/api/checkout', body, 'POST', { origin: storefront });
   assert.equal(result.status, 201);
   assert.equal(f.state.posts[0].cart[0].product_hash, 'own675');
   assert.equal(f.state.posts[0].offer_hash, 'offer675');

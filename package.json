@@ -7,10 +7,10 @@
   },
   "scripts": {
     "install:ci": "node scripts/install-ci.mjs",
-    "dev": "node scripts/run-framework.mjs dev",
+    "dev": "next dev --port 5173",
     "preview:local": "node scripts/preview-local.mjs",
-    "build": "node scripts/build-qr.mjs && node scripts/run-framework.mjs build && node scripts/check-build-secrets.mjs",
-    "start": "node --import ./scripts/sites-env.mjs ./node_modules/wrangler/bin/wrangler.js dev --config dist/server/wrangler.json --local --persist-to .wrangler/state --ip 127.0.0.1 --inspector-port 0",
+    "build": "node scripts/build-qr.mjs && next build --webpack && node scripts/package-standalone.mjs && node scripts/check-build-secrets.mjs .next/standalone",
+    "start": "node .next/standalone/server.js",
     "lint": "eslint . --ignore-pattern dist --ignore-pattern .next",
     "db:generate": "drizzle-kit generate",
     "test": "node --test tests/*.test.mjs",

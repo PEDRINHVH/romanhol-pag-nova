@@ -1,4 +1,5 @@
 // Marketing delivery is separate from payment processing. Callers persist delivery results.
+import { storefrontOrigin, storefrontClientIp } from './storefront-origin.mjs';
 export const FUNNEL_EVENTS = new Set(['PageView', 'ViewContent', 'Search', 'AddToWishlist', 'AddToCart', 'InitiateCheckout', 'AddPaymentInfo']);
 const UTM_KEYS = ['src', 'sck', 'utm_source', 'utm_campaign', 'utm_medium', 'utm_content', 'utm_term'];
 const clean = (value, max = 256) => typeof value === 'string' ? value.trim().slice(0, max) : '';
@@ -95,7 +96,8 @@ export async function sendOrderTracking(order, env, options = {}) {
 export async function handleTrackingRequest(request, env, options = {}) {
   const reply = (value, status) => Response.json(value, { status, headers: { 'cache-control': 'no-store' } });
   if (request.method !== 'POST') return reply({ error: 'method_not_allowed' }, 405);
-  if (request.headers.get('origin') !== new URL(request.url).origin) return reply({ error: 'invalid_origin' }, 403);
+  const origin = storefrontOrigin(request);
+  if (!origin) return reply({ error: 'invalid_origin' }, 403);
   if (!request.headers.get('content-type')?.startsWith('application/json')) return reply({ error: 'invalid_content_type' }, 415);
   if (Number(request.headers.get('content-length')) > 12000) return reply({ error: 'too_large' }, 413);
   try {
@@ -108,8 +110,8 @@ export async function handleTrackingRequest(request, env, options = {}) {
     if (!FUNNEL_EVENTS.has(input.eventName)) return reply({ error: 'invalid_event' }, 400);
     if (input.tracking?.consent !== true) return reply({ accepted: false }, 200);
     const source = new URL(input.tracking.eventSourceUrl);
-    if (source.origin !== new URL(request.url).origin) return reply({ error: 'invalid_source' }, 400);
-    const event = await buildMetaEvent(input, { clientIp: request.headers.get('cf-connecting-ip'), userAgent: request.headers.get('user-agent') });
+    if (source.origin !== origin) return reply({ error: 'invalid_source' }, 400);
+    const event = await buildMetaEvent(input, { clientIp: storefrontClientIp(request), userAgent: request.headers.get('user-agent') });
     const result = await sendMetaEvent(event, env, options);
     return reply({ accepted: result.success }, result.success ? 202 : result.retry ? 503 : 202);
   } catch { return reply({ error: 'invalid_event' }, 400); }

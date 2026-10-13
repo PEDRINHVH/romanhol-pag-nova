@@ -1,5 +1,6 @@
 import { checkoutItems, catalogProduct } from './catalog.mjs';
 import { sendOrderTracking, purchaseEventId } from './tracking.mjs';
+import { storefrontOrigin, storefrontClientIp } from './storefront-origin.mjs';
 
 const API = 'https://api.ironpayapp.com.br/api/public/v1';
 // Verified in the account on 2026-10-12; data initialization belongs outside migrations.
@@ -34,12 +35,12 @@ export function validateCustomer(input = {}) {
   if (!/^\d{8}$/.test(address.zipCode) || address.street.length < 3 || !address.number || !address.neighborhood || address.city.length < 2 || !'AC AL AP AM BA CE DF ES GO MA MT MS MG PA PB PR PE PI RJ RN RS RO RR SC SP SE TO'.split(' ').includes(address.state)) throw new PaymentError('invalid_address');
   return customer;
 }
-function clientTracking(value = {}, request) {
+function clientTracking(value = {}, origin) {
   value = value && typeof value === 'object' ? value : {};
   const attribution = {};
   for (const key of ['src', 'sck', 'utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content']) attribution[key] = clean(value.attribution?.[key], 256);
-  let eventSourceUrl = new URL(request.url).origin + '/checkout';
-  try { const source = new URL(value.eventSourceUrl); if (source.origin === new URL(request.url).origin) eventSourceUrl = source.origin + source.pathname; } catch {}
+  let eventSourceUrl = origin + '/checkout';
+  try { const source = new URL(value.eventSourceUrl); if (source.origin === origin) eventSourceUrl = source.origin + source.pathname; } catch {}
   return { consent: value.consent === true, fbp: clean(value.fbp), fbc: clean(value.fbc), attribution, eventSourceUrl };
 }
 async function readBody(request, max = 24000) {
@@ -166,7 +167,8 @@ async function refreshOrder(env, row) {
   return order;
 }
 async function checkout(request, env, ctx) {
-  if (request.headers.get('origin') !== new URL(request.url).origin) throw new PaymentError('invalid_origin', 403);
+  const origin = storefrontOrigin(request);
+  if (!origin) throw new PaymentError('invalid_origin', 403);
   if (!env.DB || !env.PAYMENT_API_TOKEN || !/^\d+$/.test(String(env.SHIPPING_AMOUNT_CENTS ?? ''))) throw new PaymentError('checkout_unavailable', 503);
   const input = await readBody(request);
   if (typeof input.idempotencyKey !== 'string' || !/^[\w-]{16,100}$/.test(input.idempotencyKey)) throw new PaymentError('invalid_idempotency_key');
@@ -184,7 +186,7 @@ async function checkout(request, env, ctx) {
     const order = await refreshOrder(env, existing); background(ctx, deliverTracking(order, env));
     return json(publicOrder(order), order.status === 'processing' ? 202 : 200);
   }
-  const order = { id: crypto.randomUUID(), status: 'processing', items, customer, totalCents, subtotalCents, shippingCents, createdAt: new Date().toISOString(), tracking: clientTracking(input.tracking, request), clientIp: clean(request.headers.get('cf-connecting-ip'), 64), userAgent: clean(request.headers.get('user-agent'), 512) };
+  const order = { id: crypto.randomUUID(), status: 'processing', items, customer, totalCents, subtotalCents, shippingCents, createdAt: new Date().toISOString(), tracking: clientTracking(input.tracking, origin), clientIp: clean(storefrontClientIp(request), 64), userAgent: clean(request.headers.get('user-agent'), 512) };
   const inserted = await query(env.DB, 'INSERT OR IGNORE INTO payment_orders (id, idempotency_key, fingerprint, status, data_json, updated_at) VALUES (?, ?, ?, ?, ?, ?)', order.id, input.idempotencyKey, fingerprint, order.status, JSON.stringify(order), Date.now()).run();
   if (!changes(inserted)) {
     existing = await query(env.DB, 'SELECT * FROM payment_orders WHERE idempotency_key = ?', input.idempotencyKey).first();
@@ -194,7 +196,7 @@ async function checkout(request, env, ctx) {
   let dispatched = false;
   try {
     const mapped = [];
-    for (const item of items) mapped.push(await productMapping(env, item, new URL(request.url).origin));
+    for (const item of items) mapped.push(await productMapping(env, item, origin));
     const address = customer.address;
     const payload = { amount: totalCents, offer_hash: mapped[0].offer_hash, payment_method: 'pix', installments: 1, customer: { name: customer.name, email: customer.email, phone_number: customer.phone, document: customer.document, street_name: address.street, number: address.number, complement: address.complement, neighborhood: address.neighborhood, city: address.city, state: address.state, zip_code: address.zipCode }, cart: items.map((item, index) => ({ product_hash: mapped[index].product_hash, title: `${item.name} — ${item.size}`, price: item.unitPriceCents, quantity: item.quantity, operation_type: 1, tangible: true })), transaction_origin: 'api', expire_in_days: 1, tracking: order.tracking.attribution, postback_url: new URL('/api/payment/postback', request.url).href };
     dispatched = true;
