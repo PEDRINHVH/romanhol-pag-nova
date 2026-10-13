@@ -19,4 +19,23 @@ body:has(.checkout-page) .site-header .search,
 body:has(.checkout-page) .site-header .category-nav,
 body:has(.checkout-page) .site-header [href="#/favoritos"]{display:none}
 body:has(.checkout-page) .site-header .header-inner{display:flex;justify-content:space-between;min-height:64px;padding-block:10px}
+.checkout-fields-group{border:0;padding:0;margin:0;min-width:0}
+.checkout-fields-group:disabled input{background:#f5f6f8;color:#536371;opacity:1}
+.checkout-field-error{font-size:12px;line-height:1.45;color:#b42318;font-weight:400}
+.checkout-field-error:empty{display:none}
+.checkout-field input[aria-invalid="true"]{border-color:#b42318}
+.checkout-field input{scroll-margin-top:120px}
+.cep-feedback{margin-top:-6px;font-size:12px;line-height:1.5;color:#536371}
+.cep-feedback p{margin:0}.cep-feedback [data-state="success"]{color:#196346}
+.cep-feedback [data-state="error"],.cep-feedback [data-state="not-found"]{color:#8a4711}
+.cep-feedback button,.config-retry{min-height:44px;padding:8px 0;font-size:13px}
+.checkout-config-error{font-size:13px;line-height:1.5;color:#8a4711}
+.checkout-config-error:empty{display:none}
+.checkout-recovery{font-size:13px;line-height:1.6;background:#eff4ff;border-left:3px solid #2f5aff;padding:12px;margin:0 0 20px}
+.pix-method-logo{display:block;flex:0 0 auto;width:90px;height:36px;object-fit:contain}
+.pix-result-mark:has(.pix-method-logo){width:110px;height:48px;border-radius:8px;background:transparent}
+.checkout-method div{min-width:0}.checkout-method .method-selected{margin-left:auto}
+.checkout-submit:disabled{cursor:default}.checkout-submit[aria-busy="true"]{cursor:wait}
+[data-retry-config][hidden],[data-cep-retry][hidden]{display:none}
+@media(max-width:380px){.checkout-method{gap:10px}.checkout-method .pix-method-logo{width:70px;height:28px}}
 .checkout-items>summary{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:44px;margin-top:8px;font-size:13px;cursor:pointer;list-style:none;border-bottom:1px solid #e1e5e9}.checkout-items>summary::-webkit-details-marker{display:none}.checkout-items>summary span{font-size:12px;color:#536371;text-decoration:underline;text-underline-offset:3px}.checkout-items[open]>summary span{display:none}

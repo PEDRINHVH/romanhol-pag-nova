@@ -1,0 +1,17 @@
+Pix logo — official Banco Central do Brasil artwork
+
+Source: https://www.bcb.gov.br/content/estabilidadefinanceira/pix/Regulamento_Pix/I_manual_uso_marca_pix.pdf
+Publication: Manual de Uso da Marca Pix, version 1.6, 14 May 2025, page 6.
+Retrieved: 12 October 2026.
+Variant: symbol + logotype, suitable for digital applications as described on page 6.
+
+Conversion: official PDF page 6 converted losslessly to SVG paths using Poppler
+pdftocairo. Extracted the eight vector paths that compose the lower symbol +
+logotype example; removed the manual's text and decorative page background.
+No drawing, AI generation, font replacement or recoloring was performed.
+Original paths and PDF-converted colors were preserved exactly.
+
+Output: pix.svg, transparent background, 240 x 96 nominal dimensions.
+viewBox: 458 240 240 96. Artwork bounds: x 466.5–690.226562,
+y 248.488281–328.308594; surrounding spacing retained in viewport.
+Pix is a mark of Banco Central do Brasil. Follow its official brand manual.
