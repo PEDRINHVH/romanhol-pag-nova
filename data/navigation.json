@@ -1,0 +1,113 @@
+[
+  {
+    "id": "capacetes",
+    "products": 246,
+    "skus": 1088,
+    "uniqueImageAssetIds": 10450,
+    "galleryImages": 4038,
+    "subcategories": [
+      "aberto",
+      "articulado",
+      "fechado"
+    ],
+    "models": [
+      "AVENGER",
+      "CARBON R",
+      "CITY",
+      "DARTH II",
+      "DOWNTOWN II",
+      "FLOW",
+      "FORCE",
+      "FORCE II",
+      "NEO",
+      "ORION SV",
+      "RAZOR",
+      "ROCK",
+      "ROUTE",
+      "SOUL",
+      "SOUL II",
+      "STRADA II",
+      "V8",
+      "VORTEX"
+    ]
+  },
+  {
+    "id": "vestuario",
+    "products": 24,
+    "skus": 161,
+    "uniqueImageAssetIds": 1299,
+    "galleryImages": 193,
+    "subcategories": [
+      "botas",
+      "jaquetas",
+      "luvas",
+      "macacões"
+    ],
+    "models": [
+      "CIVIC",
+      "DRY",
+      "IRONGRIP",
+      "RACER",
+      "RAPTOR",
+      "SIGNAL",
+      "SPRINT",
+      "SS",
+      "STORM",
+      "TORNADO",
+      "TRIP AIR"
+    ]
+  },
+  {
+    "id": "acessorios",
+    "products": 126,
+    "skus": 169,
+    "uniqueImageAssetIds": 186,
+    "galleryImages": 145,
+    "subcategories": [
+      "forrações",
+      "peças",
+      "viseiras"
+    ],
+    "models": [
+      "CARBON R",
+      "CITY",
+      "DARTH",
+      "DARTH II",
+      "DOWNTOWN",
+      "FLOW",
+      "FORCE",
+      "FORCE, STRADA",
+      "MOTION",
+      "NEO",
+      "ORION",
+      "RAZOR",
+      "ROUTE",
+      "ROUTE, SOUL",
+      "SOUL",
+      "STRADA",
+      "STRADA II",
+      "STRADA II, FORCE II",
+      "STUNT",
+      "SUPRA",
+      "SUPRA, MOTION",
+      "VIPER",
+      "VIPER C",
+      "VIPER, FORCE, STRADA, MOTION"
+    ]
+  },
+  {
+    "id": "casual",
+    "products": 3,
+    "skus": 3,
+    "uniqueImageAssetIds": 25,
+    "galleryImages": 25,
+    "subcategories": [
+      "bonés"
+    ],
+    "models": [
+      "LINE",
+      "NEW ERA",
+      "TRUCKER"
+    ]
+  }
+]

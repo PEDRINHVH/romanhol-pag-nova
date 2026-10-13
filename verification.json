@@ -1,0 +1,30 @@
+{
+  "verifiedAt": "2026-10-12T22:16:13.038Z",
+  "products": 399,
+  "variants": 1421,
+  "forceII": 10,
+  "pricedProducts": 398,
+  "productsWithApprovedPhoto": 399,
+  "approvedGalleryReferences": 4401,
+  "uniquePublishedImages": 2644,
+  "remainingProductsWithoutApprovedPhoto": 0,
+  "imageCoverage": {
+    "originalUrls": 4401,
+    "allCatalogUrls": 4401,
+    "helmetUrls": 4038,
+    "helmetUniquePixelHashes": 2290,
+    "accessoryUrls": 363,
+    "totalPublishedFiles": 2644,
+    "publishedOriginalUrls": 4401,
+    "failed": 0,
+    "backgroundRemovalFailed": 0,
+    "alphaAuditedAssets": 2644,
+    "blankSourceUrlsReplaced": 2,
+    "blankSourceUniqueImages": 1,
+    "urlStatuses": {
+      "original": 4401
+    }
+  },
+  "imagePolicy": "original_branding_explicitly_requested",
+  "paymentIntegration": "pending_user_platform"
+}

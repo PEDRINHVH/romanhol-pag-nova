@@ -1,0 +1,139 @@
+{
+  "fetchedAt": "2026-10-12T21:17:18.470372+00:00",
+  "source": "https://www.norisk.com.br",
+  "expectedPublicProducts": 399,
+  "products": 399,
+  "skus": 1421,
+  "uniqueImages": 11960,
+  "categories": [
+    {
+      "id": "capacetes",
+      "products": 246,
+      "skus": 1088,
+      "uniqueImageAssetIds": 10450,
+      "galleryImages": 4038,
+      "subcategories": [
+        "aberto",
+        "articulado",
+        "fechado"
+      ],
+      "models": [
+        "AVENGER",
+        "CARBON R",
+        "CITY",
+        "DARTH II",
+        "DOWNTOWN II",
+        "FLOW",
+        "FORCE",
+        "FORCE II",
+        "NEO",
+        "ORION SV",
+        "RAZOR",
+        "ROCK",
+        "ROUTE",
+        "SOUL",
+        "SOUL II",
+        "STRADA II",
+        "V8",
+        "VORTEX"
+      ]
+    },
+    {
+      "id": "vestuario",
+      "products": 24,
+      "skus": 161,
+      "uniqueImageAssetIds": 1299,
+      "galleryImages": 193,
+      "subcategories": [
+        "botas",
+        "jaquetas",
+        "luvas",
+        "macacões"
+      ],
+      "models": [
+        "CIVIC",
+        "DRY",
+        "IRONGRIP",
+        "RACER",
+        "RAPTOR",
+        "SIGNAL",
+        "SPRINT",
+        "SS",
+        "STORM",
+        "TORNADO",
+        "TRIP AIR"
+      ]
+    },
+    {
+      "id": "acessorios",
+      "products": 126,
+      "skus": 169,
+      "uniqueImageAssetIds": 186,
+      "galleryImages": 145,
+      "subcategories": [
+        "forrações",
+        "peças",
+        "viseiras"
+      ],
+      "models": [
+        "CARBON R",
+        "CITY",
+        "DARTH",
+        "DARTH II",
+        "DOWNTOWN",
+        "FLOW",
+        "FORCE",
+        "FORCE, STRADA",
+        "MOTION",
+        "NEO",
+        "ORION",
+        "RAZOR",
+        "ROUTE",
+        "ROUTE, SOUL",
+        "SOUL",
+        "STRADA",
+        "STRADA II",
+        "STRADA II, FORCE II",
+        "STUNT",
+        "SUPRA",
+        "SUPRA, MOTION",
+        "VIPER",
+        "VIPER C",
+        "VIPER, FORCE, STRADA, MOTION"
+      ]
+    },
+    {
+      "id": "casual",
+      "products": 3,
+      "skus": 3,
+      "uniqueImageAssetIds": 25,
+      "galleryImages": 25,
+      "subcategories": [
+        "bonés"
+      ],
+      "models": [
+        "LINE",
+        "NEW ERA",
+        "TRUCKER"
+      ]
+    }
+  ],
+  "forceII": {
+    "products": 10,
+    "images": 139
+  },
+  "pricing": {
+    "forceII": 179.9,
+    "ratio": 0.21043396888524976,
+    "basis": "source API Pix when available; otherwise source selling price times 0.95, from global cash banner",
+    "missingPriceProducts": 1
+  },
+  "caveats": [
+    "Public active/catalog-visible products only; hidden/deleted products unavailable through public catalogue.",
+    "Source availability does not establish No Limite inventory.",
+    "Technical specifications await supplier validation.",
+    "Original Norisk-branded photographs are retained as explicitly authorized by the store owner."
+  ],
+  "galleryDeduplication": "Identical downloaded SHA256 when available; otherwise same filename within each product. All original asset IDs remain in image-inventory.json; filename equivalence outside downloaded Force II remains unverified.",
+  "galleryImages": 4401
+}
