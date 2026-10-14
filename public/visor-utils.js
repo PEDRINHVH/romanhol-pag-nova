@@ -7,14 +7,15 @@ const colors = [
   [/\bespel(?:hada|ahda)\b/, 'Espelhada'], [/\bcamaleao\b/, 'Camaleão'],
   [/\bfume\b/, 'Fumê'], [/\bazul\b/, 'Azul'], [/\bcinza\b/, 'Cinza'],
   [/\bvermelh[ao]\b/, 'Vermelha'], [/\brox[ao]\b/, 'Roxa'], [/\bros[ao]\b/, 'Rosa'],
+  [/\b(cristal|transparente|incolor)\b/, 'Cristal'],
 ];
 
-/** Exterior tinted visors only; names distinguish gold/mirrored from generic catalogue colors. */
+/** Exterior visors only; names distinguish finishes from generic catalogue colors. */
 export function visorColor(product) {
   const name = normalize(product.name);
   if (product.category !== 'acessorios' || normalize(product.subcategory) !== 'viseiras'
     || !/\bviseira\b/.test(name)
-    || /\b(suporte|mecanismo|reparo|solar|intern[ao]|pelicula|pinlock|filme|cristal|transparente|incolor)\b/.test(name)) return null;
+    || /\b(suporte|mecanismo|reparo|solar|intern[ao]|pelicula|pinlock|filme)\b/.test(name)) return null;
   return colors.find(([pattern]) => pattern.test(name))?.[1] ?? null;
 }
 
@@ -47,6 +48,8 @@ export function visorOffers(products, helmets) {
   return [...groups.values()].filter(group => group.options.length).sort((a, b) => compare(a.model, b.model)).map(group => ({
     ...group,
     helmets:group.helmets.sort((a, b) => compare(a.id, b.id)),
-    options:group.options.sort((a, b) => compare(a.color, b.color) || compare(a.product.id, b.product.id)),
+    options:group.options
+      .sort((a, b) => compare(a.color, b.color) || priceOf(a.product) - priceOf(b.product) || compare(a.product.id, b.product.id))
+      .filter((option, index, options) => !options.slice(0, index).some(previous => previous.color === option.color && normalize(previous.product.name) === normalize(option.product.name))),
   }));
 }

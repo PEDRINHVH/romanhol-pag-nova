@@ -120,10 +120,31 @@ a, button, input, select, textarea, summary { scroll-margin-block: 24px; }
 .quantity { min-height: 48px; height: auto; border-radius: var(--radius-pill); overflow: hidden; }
 .quantity button { min-width: 48px; min-height: 48px; background: transparent; }
 .quantity button:hover { background: var(--light); }
-.visor-bump { padding: 24px; border: 1px solid var(--line); border-radius: var(--radius-card); background: var(--light); }
-.visor-picture { background: var(--white); border-radius: var(--radius-field); }
-.visor-color { min-height: 48px; border-color: var(--line); }
-.visor-purchase .button { min-height: 48px; }
+.visor-bump { margin-block: 20px; padding: 16px; border: 1px solid var(--line); border-radius: var(--radius-card); background: var(--light); }
+.visor-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.visor-heading h2 { margin: 0; font-size: 17px; letter-spacing: -.4px; }
+.visor-optional { padding: 4px 8px; border-radius: var(--radius-pill); background: var(--white); color: var(--muted); font-size: 11px; }
+.visor-offer { grid-template-columns: 60px minmax(0,1fr); gap: 12px; align-items: center; margin-top: 16px; padding-top: 0; border: 0; }
+.visor-offer + .visor-offer { border-top: 1px solid var(--line); padding-top: 16px; }
+.visor-picture { width: 60px; height: 60px; margin: 0; background: var(--white); border-radius: 12px; overflow: hidden; }
+.visor-model { font-size: 11px; font-weight: 500; letter-spacing: 0; }
+.visor-details h3 { margin: 3px 0; font-size: 15px; }
+.visor-hint { color: var(--muted); font-size: 11px; }
+.visor-colors { grid-column: 1 / -1; gap: 4px; }
+.visor-color { position: relative; justify-content: center; width: 44px; height: 44px; min-height: 44px; padding: 6px; border: 2px solid transparent; background: transparent; }
+.visor-color:hover { background: var(--white); }
+.visor-color.selected { border-color: var(--blue); box-shadow: none; background: var(--white); }
+.visor-swatch { width: 28px; height: 28px; }
+.visor-swatch.clear { background: linear-gradient(135deg,#fff 35%,#dfe8f0 50%,#f9fcff 65%); }
+.visor-color.selected::after { content: '✓'; position: absolute; right: -1px; bottom: -1px; width: 15px; height: 15px; border-radius: 50%; background: var(--blue); color: var(--white); font: 600 10px/15px Inter,sans-serif; text-align: center; }
+.visor-color-name { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.visor-purchase { grid-column: 1 / -1; margin: 0; gap: 8px; flex-wrap: nowrap; }
+.visor-price { display: grid; gap: 3px; }
+.visor-price strong { font: 600 17px Sora,sans-serif; white-space: nowrap; }
+.visor-price > span { color: var(--muted); font-size: 11px; }
+.visor-purchase .button { width: auto; min-height: 48px; padding: 10px 18px; font-size: 13px; white-space: nowrap; }
+.visor-pending { margin: 0; padding: 0; border: 0; }
+.visor-offer ~ .visor-pending { margin-top: 12px; }
 .info-callout, .size-guide-figure img, .size-guide-callout { border-radius: var(--radius-card); }
 .size-guide-input { min-height: 48px; border-color: var(--line); border-radius: var(--radius-field); }
 .size-guide-form button { min-height: 48px; padding-inline: 24px; border-radius: var(--radius-pill); background: var(--blue); }
@@ -174,7 +195,7 @@ a, button, input, select, textarea, summary { scroll-margin-block: 24px; }
   .footer-brand { grid-column: 1 / -1; }
   .footer-brand img { width: 180px; }
   .footer-brand p { max-width: none; }
-  .cart-summary, .visor-bump { padding: 20px; }
+  .cart-summary { padding: 20px; }
   .sort-label select { max-width: 160px; }
 }
 @media (max-width: 390px) {
