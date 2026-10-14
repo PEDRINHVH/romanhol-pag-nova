@@ -2,6 +2,32 @@ const names = ['name', 'email', 'document', 'phone', 'zipCode', 'street', 'numbe
 const states = new Set('AC AL AP AM BA CE DF ES GO MA MT MS MG PA PB PR PE PI RJ RN RS RO RR SC SP SE TO'.split(' '));
 const digits = value => value.replace(/\D/g, '');
 
+export function formatPhone(value) {
+  const number = digits(String(value ?? '')).slice(0, 11);
+  if (number.length <= 2) return number ? `(${number}${number.length === 2 ? ')' : ''}` : '';
+  const local = number.slice(2), split = local.length > 8 ? 5 : 4;
+  return `(${number.slice(0, 2)}) ${local.slice(0, split)}${local.length > split ? `-${local.slice(split)}` : ''}`;
+}
+
+function maskPhoneInput(field, event) {
+  const raw = field.value, start = field.selectionStart;
+  const formatted = formatPhone(raw);
+  if (raw === formatted) return;
+  field.value = formatted;
+  if (start == null || typeof field.setSelectionRange !== 'function') return;
+  const count = digits(raw.slice(0, start)).length;
+  let cursor = 0, seen = 0;
+  while (cursor < formatted.length && seen < count) {
+    if (/\d/.test(formatted[cursor])) seen++;
+    cursor++;
+  }
+  // Keep deletion before a separator so Backspace never gets stuck on the mask.
+  if (!event.inputType?.startsWith('delete')) {
+    while (cursor < formatted.length && /\D/.test(formatted[cursor])) cursor++;
+  }
+  field.setSelectionRange(cursor, cursor);
+}
+
 // Keep the checksum in sync with validCPF in worker/payments.mjs.
 function validCPF(value) {
   const cpf = digits(value);
@@ -59,7 +85,11 @@ export function mountCheckoutValidation(form) {
   for (const name of names) {
     const field = form.querySelector(`[name="${name}"]`);
     if (!field) continue;
-    const onInput = () => showError(form, field, '');
+    if (name === 'phone') field.value = formatPhone(field.value);
+    const onInput = event => {
+      if (name === 'phone') maskPhoneInput(field, event);
+      showError(form, field, '');
+    };
     const onBlur = () => {
       if (name === 'state') {
         const upper = field.value.trim().toUpperCase();

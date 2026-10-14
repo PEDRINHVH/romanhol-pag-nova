@@ -2,7 +2,7 @@ import {escapeHTML as e, money, priceOf} from './catalog-utils.js?v=20261014-nor
 import {renderCheckoutItems, renderCheckoutGift, changeCheckoutCart} from './checkout-cart.js?v=20261014-cart-shipping';
 import {SHIPPING_OPTIONS, getShippingQuote, getShippingMethod, updateShippingMethod} from './product-shipping.js?v=20261014-cart-shipping';
 import {mountAddressAutofill} from './address-autofill.js';
-import {mountCheckoutValidation, validateCheckoutForm, validationError} from './checkout-validation.js';
+import {mountCheckoutValidation, validateCheckoutForm, validationError} from './checkout-validation.js?v=20261014-phone-mask';
 
 const sessionKey = 'nolimit:checkout:attempt';
 const readAttempt = () => {try {const value=JSON.parse(sessionStorage.getItem(sessionKey));return value&&typeof value.idempotencyKey==='string'&&typeof value.signature==='string'?value:null;} catch {return null;}};
@@ -77,7 +77,7 @@ export function checkoutPage({cart,products,media,addons}) {
         <section data-checkout-step="1" ${checkoutStep===1?'':'hidden'} aria-labelledby="checkout-step-1">
           <div class="checkout-section-title"><h2 id="checkout-step-1" tabindex="-1">Seus dados</h2></div>
           <p class="checkout-section-note">Dados para pagamento e entrega. Não é preciso criar uma conta.</p>
-          <div class="checkout-fields">${field('name','Nome completo','autocomplete="name" required minlength="5" maxlength="120"',true)}${field('email','E-mail','type="email" autocomplete="email" required maxlength="180"',true)}${field('document','CPF','inputmode="numeric" autocomplete="off" placeholder="000.000.000-00" required maxlength="14"')}${field('phone','Celular com DDD','type="tel" autocomplete="tel-national" placeholder="(11) 99999-9999" required maxlength="17"')}</div>
+          <div class="checkout-fields">${field('name','Nome completo','autocomplete="name" required minlength="5" maxlength="120"',true)}${field('email','E-mail','type="email" autocomplete="email" required maxlength="180"',true)}${field('document','CPF','inputmode="numeric" autocomplete="off" placeholder="000.000.000-00" required maxlength="14"')}${field('phone','Celular com DDD','type="tel" inputmode="numeric" autocomplete="tel-national" placeholder="(11) 99999-9999" required maxlength="15"')}</div>
         </section>
         <section data-checkout-step="2" ${checkoutStep===2?'':'hidden'} aria-labelledby="checkout-step-2">
           <div class="checkout-section-title"><h2 id="checkout-step-2" tabindex="-1">Endereço de entrega</h2></div>
