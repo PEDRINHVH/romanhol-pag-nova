@@ -15,10 +15,10 @@
   .pix-result{padding:24px 16px}.pix-result h2{font-size:24px;line-height:1.2}.pix-result>p{font-size:14px;line-height:1.6}.pix-result-mark{width:44px;height:44px;font-size:24px;margin-bottom:16px}.pix-amount{font-size:30px;margin:18px 0}.pix-waiting{flex-wrap:wrap}.order-reference{font-size:11px!important}.pix-back{margin-top:16px;font-size:13px}
   .consent-banner{bottom:max(12px,env(safe-area-inset-bottom));left:max(12px,env(safe-area-inset-left));right:max(12px,env(safe-area-inset-right));padding:16px}.consent-actions{flex-wrap:wrap}.consent-actions button{flex:1}
 }
-body:has(.checkout-page) .site-header .search,
-body:has(.checkout-page) .site-header .category-nav,
-body:has(.checkout-page) .site-header [href="#/favoritos"]{display:none}
-body:has(.checkout-page) .site-header .header-inner{display:flex;justify-content:space-between;min-height:64px;padding-block:10px}
+body:has(#app .checkout-page) .site-header .search,
+body:has(#app .checkout-page) .site-header .category-nav,
+body:has(#app .checkout-page) .site-header [href="#/favoritos"]{display:none}
+body:has(#app .checkout-page) .site-header .header-inner{display:flex;justify-content:space-between;min-height:64px;padding-block:10px}
 .checkout-fields-group{border:0;padding:0;margin:0;min-width:0}
 .checkout-fields-group:disabled input{background:#f5f6f8;color:#536371;opacity:1}
 .checkout-field-error{font-size:12px;line-height:1.45;color:#b42318;font-weight:400}

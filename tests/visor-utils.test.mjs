@@ -102,13 +102,13 @@ function clickVisor(id,cart,path,cap) {
   Function(...Object.keys(args),addHandler)(...Object.values(args));
   return {messages,events,location,saved,rendered};
 }
-test('real handler adds selected Razor SKU once and preserves PDP checkout redirect', () => {
+test('real handler adds selected Razor SKU once and redirects PDP purchase to cart', () => {
   const cart=[{id:'580',size:'58/M',qty:1}];
   const result=clickVisor('615',cart,'/produto/razor',catalog.find(p=>p.id==='580'));
   assert.deepEqual(cart[1],{id:'615',size:'ÚNICO',qty:1});
   assert.equal(result.saved,1);
   assert.equal(result.events[0][0],'AddToCart');
-  assert.equal(result.location.hash,'#/checkout');
+  assert.equal(result.location.hash,'#/sacola');
   assert.equal(clickVisor('615',cart,'/checkout').saved,0);
   assert.equal(cart.length,2);
 });
