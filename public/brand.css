@@ -100,6 +100,13 @@ a, button, input, select, textarea, summary { scroll-margin-block: 24px; }
 .card-body { padding: 20px; }
 .card-body h3 { font-weight: 500; }
 .card-bottom { margin-top: 16px; padding-top: 12px; }
+.home-products { gap: 16px; }
+.home-products .product-card { display: flex; flex-direction: column; }
+.home-products .card-media { aspect-ratio: 6 / 5; }
+.home-products .card-body { display: flex; flex: 1; flex-direction: column; padding: 12px 14px; }
+.home-products .card-body h3 { min-height: 0; margin: 4px 0; }
+.home-products .card-color { min-height: 0; margin-bottom: 8px; }
+.home-products .card-bottom { margin-top: auto; padding-top: 8px; flex-wrap: nowrap; gap: 4px; }
 .card-price strong { font-family: Sora, Inter, sans-serif; font-size: 18px; font-weight: 600; }
 .product-go { color: var(--blue); background: var(--light); }
 .product-go:hover { background: var(--blue); color: var(--white); }
@@ -213,6 +220,8 @@ a, button, input, select, textarea, summary { scroll-margin-block: 24px; }
   .card-body h3 { font-size: 13px; min-height: 56px; }
   .card-price strong { font-size: 16px; }
   .card-bottom { flex-wrap: wrap; gap: 8px; }
+  .home-products { gap: 12px 10px; }
+  .home-products .card-body { padding: 10px; }
   .product-go { margin-left: auto; }
   .favorite { top: 8px; right: 8px; }
   .product-tag { left: 10px; top: 10px; font-size: 9px; padding-inline: 6px; }
