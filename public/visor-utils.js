@@ -1,4 +1,4 @@
-import {normalize, priceOf} from './catalog-utils.js';
+import {normalize, priceOf} from './catalog-utils.js?v=20261014-norisk-products';
 
 const modelKey = value => normalize(value).trim().replace(/\s+/g, ' ');
 const compare = (a, b) => String(a).localeCompare(String(b), 'pt-BR', {numeric:true});
@@ -12,7 +12,7 @@ const colors = [
 
 /** Exterior visors only; names distinguish finishes from generic catalogue colors. */
 export function visorColor(product) {
-  const name = normalize(product.name);
+  const name = normalize(product.fullName || product.name);
   if (product.category !== 'acessorios' || normalize(product.subcategory) !== 'viseiras'
     || !/\bviseira\b/.test(name)
     || /\b(suporte|mecanismo|reparo|solar|intern[ao]|pelicula|pinlock|filme)\b/.test(name)) return null;
@@ -50,6 +50,6 @@ export function visorOffers(products, helmets) {
     helmets:group.helmets.sort((a, b) => compare(a.id, b.id)),
     options:group.options
       .sort((a, b) => compare(a.color, b.color) || priceOf(a.product) - priceOf(b.product) || compare(a.product.id, b.product.id))
-      .filter((option, index, options) => !options.slice(0, index).some(previous => previous.color === option.color && normalize(previous.product.name) === normalize(option.product.name))),
+      .filter((option, index, options) => !options.slice(0, index).some(previous => previous.color === option.color && normalize(previous.product.fullName || previous.product.name) === normalize(option.product.fullName || option.product.name))),
   }));
 }

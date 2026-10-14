@@ -7,7 +7,39 @@ test('search, size and category combine',()=>assert.deepEqual(filterProducts(pro
 test('price sorting uses display prices',()=>assert.equal(filterProducts(products,{sort:'price-asc'})[0].id,'1'));
 test('unprocessed images never leak into storefront',()=>assert.equal(productImage({images:[{url:'https://original.example/cap.jpg'}]}),null));
 test('approved local edited images display',()=>assert.equal(productImage({images:[{url:'original'}]},{byUrl:{original:{status:'edited',url:'/assets/products/edited.png'}}}),'/assets/products/edited.png'));
-test('normalization accepts product wrapper and rebrands names',()=>assert.equal(normalizeProducts({products:[{name:'Norisk Force',id:12}]})[0].name,'No Limite Force'));
+test('normalization accepts product wrapper and preserves the Norisk brand',()=>assert.equal(normalizeProducts({products:[{name:'Norisk Force',id:12}]})[0].name,'Norisk Force'));
+test('product titles remove variant attributes and retain models and editions',()=>{
+  const examples = [
+    ['CAPACETE NO LIMITE FORCE II MONOCOLOR PRETO FOSCO','Capacete Norisk Force II'],
+    ['CAPACETE NORISK SOUL II GRAND PRIX GERMANY','Capacete Norisk Soul II Grand Prix Germany'],
+    ['CAPACETE NOLIMIT RAZOR MONOCOLOR FOSCO BLACK EDITION','Capacete Norisk Razor Black Edition'],
+    ['CAPACETE NO LIMITE RAZOR MENINAS SUPER PODEROSAS','Capacete Norisk Razor Meninas Super Poderosas'],
+    ['VISEIRA REVO ROSA NO LIMITE CAPACETE RAZOR','Viseira Norisk Razor'],
+    ['PINLOCK CAPACETE NO LIMITE STRADA II/FORCE II','Pinlock Norisk Strada II/Force II'],
+    ['SUPORTE DE VISEIRA CAPACETE NORISK STUNT/FF389/FF369','Suporte de Viseira Norisk Stunt/FF389/FF369'],
+    ['FORRAÇÃO COMPLETA NO LIMITE FF302','Forração Completa Norisk FF302'],
+    ['ÓCULOS INTERNO FUMÊ NO LIMITE CAPACETE FORCE','Óculos Interno Norisk Force'],
+    ['JAQUETA NO LIMITE TRIP AIR FEMININA ROSA','Jaqueta Norisk Trip Air Feminina'],
+    ['MACACÃO NO LIMITE SS PRETO/VERMELHO/BRANCO','Macacão Norisk SS'],
+    ['LUVA NO LIMITE RAPTOR CINZA TAMANHO M','Luva Norisk Raptor'],
+    ['BONÉ NO LIMITE NEW ERA PRETO','Boné Norisk New Era'],
+    ['CAPACETE NORISK CARBON R SOLID MATTE CARBON','Capacete Norisk Carbon R Solid'],
+    ['PALA CAPACETE NORISK DARTH MATTE BLACK U','Pala Norisk Darth'],
+    ['CAPACETE NORISK FORCE II PRETO FOSCO 58','Capacete Norisk Force II'],
+    ['CAPACETE NORISK SOUL II GRAND PRIX USA','Capacete Norisk Soul II Grand Prix USA'],
+  ];
+  for (const [name,expected] of examples) assert.equal(normalizeProducts([{name}])[0].name,expected,name);
+});
+test('short titles preserve full names, variant data, compatibility and identifiers',()=>{
+  const original={id:'helmet-1',slug:'capacete-no-limite-force-ii-preto',name:'CAPACETE NO LIMITE FORCE II PRETO FOSCO',category:'capacetes',model:'FORCE II',color:'PRETO',finish:'FOSCO',price:500,description:'NO LIMITE com casco ABS e viseira de 2 mm.',specifications:{compatibility:'FORCE II'},variants:[{id:'sku-58',size:'58',price:510,available:true}]};
+  const product=normalizeProducts([original])[0];
+  for(const key of ['id','slug','category','model','color','finish','price','specifications','variants']) assert.deepEqual(product[key],original[key],key);
+  assert.equal(product.fullName,'CAPACETE Norisk FORCE II PRETO FOSCO');
+  assert.equal(product.description,'Norisk com casco ABS e viseira de 2 mm.');
+  assert.equal(original.name,'CAPACETE NO LIMITE FORCE II PRETO FOSCO');
+  assert.deepEqual(normalizeProducts([product])[0],product);
+  assert.deepEqual(filterProducts([product],{q:'fosco'}),[product]);
+});
 test('Force II compatible accessories keep their own price',()=>assert.equal(priceOf({name:'Viseira Force II',category:'acessorios',price:25}),25));
 test('missing prices stay missing',()=>assert.equal(priceOf({price:null}),null));
 test('selected sizes use the variant price',()=>assert.equal(priceOf({price:200,variants:[{size:'58',price:210}]},'58'),210));

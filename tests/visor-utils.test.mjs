@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {visorColor, visorOffers} from '../public/visor-utils.js';
 import {visorBump} from '../public/visor-ui.js';
-import {priceOf} from '../public/catalog-utils.js';
+import {priceOf, normalizeProducts} from '../public/catalog-utils.js';
 
 const helmet = (model, id = model) => ({id, model, category:'capacetes'});
 const visor = (overrides = {}) => ({id:'visor', name:'VISEIRA FUMÊ CAPACETE FORCE', model:'FORCE', category:'acessorios', subcategory:'viseiras', price:23.97, variants:[{id:'sku', size:'ÚNICO', available:null}], ...overrides});
@@ -55,6 +55,14 @@ test('real catalogue only offers explicitly matched models and all Razor colors'
 });
 
 const catalog = JSON.parse(readFileSync(new URL('../public/data/catalog.json', import.meta.url),'utf8'));
+test('short product titles preserve every compatible visor SKU and color', () => {
+  const normalized = normalizeProducts(catalog);
+  const offers = products => visorOffers(products, products.filter(p => p.category === 'capacetes'))
+    .map(group => ({model:group.model, options:group.options.map(option => [option.product.id, option.color])}));
+  assert.deepEqual(offers(normalized), offers(catalog));
+  assert.equal(visorColor(visor({name:'Viseira Norisk Force', fullName:'VISEIRA SOLAR FUMÊ NORISK CAPACETE FORCE'})), null);
+  assert.equal(visorColor(visor({name:'Viseira Norisk Force', fullName:'VISEIRA CRISTAL NORISK CAPACETE FORCE'})), 'Cristal');
+});
 const ui = (helmets, choices = new Map(), cart = []) => visorBump(catalog, helmets, {choices, cart, media:()=>'', link:p=>`#/produto/${p.slug}`});
 test('owner-confirmed FORCE II compatibility exposes real clear and tinted SKUs', () => {
   const cap = catalog.find(p=>p.id==='394');

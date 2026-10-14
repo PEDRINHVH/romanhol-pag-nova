@@ -46,7 +46,7 @@ class DescriptionText(HTMLParser):
 def technical_description(p):
     parser = DescriptionText()
     parser.feed(p['description'])
-    text = re.sub(r'\b(?:norisk|no\s*limite?)\b', 'No Limite', ''.join(parser.parts), flags=re.I)
+    text = re.sub(r'\b(?:norisk|no\s*limite?)\b', 'Norisk', ''.join(parser.parts), flags=re.I)
     paragraphs = []
     for raw in text.splitlines():
         raw = re.sub(r'\s+', ' ', raw).strip()
@@ -57,7 +57,7 @@ def technical_description(p):
         for sentence in sentences:
             sentence = re.sub(r'(?:,\s*(?:com|também)|\s+(?:e|com))\s+certific.*$', '.', sentence, flags=re.I)
             sentence = re.sub(r'\s+CE\s+Nível\s+\d+', '', sentence, flags=re.I).strip()
-            if not sentence or INSTITUTIONAL.search(sentence) or re.match(r'^(?:No\s+Limite\s+X\s+|Que foi cuidadosamente projetad|É urbano, é atual)', sentence, re.I):
+            if not sentence or INSTITUTIONAL.search(sentence) or re.match(r'^(?:(?:Norisk|No\s+Limite)\s+X\s+|Que foi cuidadosamente projetad|É urbano, é atual)', sentence, re.I):
                 continue
             retained.append(sentence)
         # Source bullets remain distinct; longer prose is grouped into short paragraphs.
@@ -76,7 +76,7 @@ def technical_description(p):
         if group:
             paragraphs.append(' '.join(group))
     result = '\n\n'.join(paragraphs)
-    return result or re.sub(r'\bno\s*limite?\b', 'No Limite', p['name'].capitalize(), flags=re.I) + '.'
+    return result or re.sub(r'\b(?:norisk|no\s*limite?)\b', 'Norisk', p['name'].capitalize(), flags=re.I) + '.'
 
 def public_product(p):
     keys = ['id', 'slug', 'name', 'category', 'subcategory', 'model', 'color', 'finish', 'price', 'imageStatus']

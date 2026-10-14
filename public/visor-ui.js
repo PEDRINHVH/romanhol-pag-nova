@@ -1,5 +1,5 @@
-import {escapeHTML as e, money, priceOf} from './catalog-utils.js';
-import {visorOffers} from './visor-utils.js';
+import {escapeHTML as e, money, priceOf} from './catalog-utils.js?v=20261014-norisk-products';
+import {visorOffers} from './visor-utils.js?v=20261014-norisk-products';
 
 const swatch = color => {
   const label = color.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
