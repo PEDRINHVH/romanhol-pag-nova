@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import {existsSync} from 'node:fs';
 import {renderProtectCarConfigurator,mountProtectCarConfigurator,renderProtectCarDescription,mountProtectCarComparisons} from '../public/protectcar-ui.js';
 import {PROTECTCAR_KITS} from '../public/protectcar-data.js';
 
@@ -50,6 +51,24 @@ test('renderer labels required dependent selects and both accessible comparisons
   }
   assert.match(description,/class="protectcar-before-label">Antes/);
   assert.match(description,/class="protectcar-after-label">Depois/);
+});
+
+test('demonstration videos load on demand with local media, posters and accessible descriptions',()=>{
+  const html=renderProtectCarDescription();
+  const videos=[...html.matchAll(/<video\b([^>]*)>([\s\S]*?)<\/video>/g)];
+  assert.equal(videos.length,3);
+  for(const [,attributes,body] of videos) {
+    assert.match(attributes,/controls playsinline preload="none"/);
+    assert.doesNotMatch(attributes,/autoplay/);
+    assert.match(attributes,/width="540" height="(?:720|960)"/);
+    assert.match(attributes,/aria-label="[^"]+"/);
+    const descriptionId=attributes.match(/aria-describedby="([^"]+)"/)[1];
+    assert.ok(html.includes(`id="${descriptionId}"`));
+    for(const asset of [attributes.match(/poster="([^"]+)"/)[1],body.match(/<source src="([^"]+)"/)[1]]) {
+      assert.ok(asset.startsWith('/assets/protectcar/'));
+      assert.ok(existsSync(new URL(`../public${asset}`,import.meta.url)),`Missing asset: ${asset}`);
+    }
+  }
 });
 
 test('image drag and keyboard range synchronize reveal, clamp, cancel and clean up',()=>{
