@@ -120,9 +120,9 @@ async function productMapping(env, item, origin) {
     throw error;
   }
 }
-export function publicOrder(order) {
+export function publicOrder(order, env = {}) {
   const shipping = SHIPPING_OPTIONS.find(option => option.id === order.shippingMethod) || SHIPPING_OPTIONS[0];
-  return { id: order.id, status: order.status, retryAllowed: order.status === 'refused', totalCents: order.totalCents, subtotalCents: order.subtotalCents, shippingCents: order.shippingCents, giftWrap: order.giftWrap === true, shippingMethod: shipping.id, shippingLabel: order.shippingLabel || shipping.label, shippingDeliveryEstimate: order.shippingDeliveryEstimate || shipping.deliveryEstimate, items: order.items.map(({ id, name, size, quantity, unitPriceCents }) => ({ id, name, size, quantity, unitPriceCents })), pix: order.pix || null, createdAt: order.createdAt, paidAt: order.paidAt || null, ...(order.status === 'paid' ? { purchaseEventId: purchaseEventId(order.id) } : {}) };
+  return { id: order.id, status: order.status, retryAllowed: order.status === 'refused', totalCents: order.totalCents, subtotalCents: order.subtotalCents, shippingCents: order.shippingCents, giftWrap: order.giftWrap === true, shippingMethod: shipping.id, shippingLabel: order.shippingLabel || shipping.label, shippingDeliveryEstimate: order.shippingDeliveryEstimate || shipping.deliveryEstimate, items: order.items.map(({ id, name, size, quantity, unitPriceCents }) => ({ id, name, size, quantity, unitPriceCents })), pix: order.pix || null, createdAt: order.createdAt, paidAt: order.paidAt || null, ...(order.status === 'paid' && env.META_PURCHASE_SOURCE !== 'utmify' ? { purchaseEventId: purchaseEventId(order.id) } : {}) };
 }
 async function saveOrder(env, order) {
   await query(env.DB, 'UPDATE payment_orders SET status = ?, provider_hash = ?, data_json = ?, updated_at = ? WHERE id = ?', order.status, order.providerHash || null, JSON.stringify(order), Date.now(), order.id).run();
@@ -199,14 +199,14 @@ async function checkout(request, env, ctx) {
   if (existing) {
     if (existing.fingerprint !== fingerprint) throw new PaymentError('idempotency_conflict', 409);
     const order = await refreshOrder(env, existing); background(ctx, deliverTracking(order, env));
-    return json(publicOrder(order), order.status === 'processing' ? 202 : 200);
+    return json(publicOrder(order, env), order.status === 'processing' ? 202 : 200);
   }
   const order = { id: crypto.randomUUID(), status: 'processing', items, customer, totalCents, subtotalCents, shippingCents, giftWrap, shippingMethod, shippingLabel: shipping.label, shippingDeliveryEstimate: shipping.deliveryEstimate, createdAt: new Date().toISOString(), tracking: clientTracking(input.tracking, origin), clientIp: clean(storefrontClientIp(request), 64), userAgent: clean(request.headers.get('user-agent'), 512) };
   const inserted = await query(env.DB, 'INSERT OR IGNORE INTO payment_orders (id, idempotency_key, fingerprint, status, data_json, updated_at) VALUES (?, ?, ?, ?, ?, ?)', order.id, input.idempotencyKey, fingerprint, order.status, JSON.stringify(order), Date.now()).run();
   if (!changes(inserted)) {
     existing = await query(env.DB, 'SELECT * FROM payment_orders WHERE idempotency_key = ?', input.idempotencyKey).first();
     if (existing.fingerprint !== fingerprint) throw new PaymentError('idempotency_conflict', 409);
-    return json(publicOrder(fromRow(existing)), 202);
+    return json(publicOrder(fromRow(existing), env), 202);
   }
   let dispatched = false;
   try {
@@ -225,11 +225,11 @@ async function checkout(request, env, ctx) {
     await saveOrder(env, order);
     const checked = await refreshOrder(env, await byId(env.DB, order.id));
     background(ctx, deliverTracking(checked, env));
-    return json(publicOrder(checked), 201);
+    return json(publicOrder(checked, env), 201);
   } catch (error) {
     order.status = dispatched && error.code !== 'gateway_rejected' ? 'payment_uncertain' : 'refused';
     await saveOrder(env, order);
-    return json({ ...publicOrder(order), error: dispatched ? 'payment_creation_failed' : 'checkout_preparing', message: dispatched ? 'Não foi possível confirmar a geração do Pix no Pagar.me. Acompanhe este pedido antes de tentar novamente.' : 'Estamos preparando este produto para pagamento no Pagar.me. Tente novamente mais tarde.' }, 503);
+    return json({ ...publicOrder(order, env), error: dispatched ? 'payment_creation_failed' : 'checkout_preparing', message: dispatched ? 'Não foi possível confirmar a geração do Pix no Pagar.me. Acompanhe este pedido antes de tentar novamente.' : 'Estamos preparando este produto para pagamento no Pagar.me. Tente novamente mais tarde.' }, 503);
   }
 }
 export async function retryPaymentTracking(env) {
@@ -285,7 +285,7 @@ export async function handlePaymentRequest(request, env, ctx) {
     const row = await byId(env.DB, id);
     if (!row) return json({ error: 'order_not_found' }, 404);
     const order = await refreshOrder(env, row); background(ctx, deliverTracking(order, env));
-    return json(publicOrder(order));
+    return json(publicOrder(order, env));
   } catch (error) {
     const messages = {invalid_cpf:'Confira o CPF informado. Digite os 11 números de um CPF válido.',invalid_customer:'Confira seu nome completo, e-mail e celular com DDD.',invalid_address:'Confira o CEP e preencha seu endereço de entrega completo.',invalid_items:'Um item ou tamanho da sacola está indisponível. Revise sua seleção.',idempotency_conflict:'Os dados deste pedido já foram enviados. Verifique o pagamento antes de iniciar outro pedido.'};
     return json({ error: error instanceof PaymentError ? error.code : 'checkout_unavailable', message: messages[error.code] || 'Não foi possível concluir esta etapa do pagamento no Pagar.me. Confira os dados e tente novamente.' }, error instanceof PaymentError ? error.status : 503);

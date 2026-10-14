@@ -44,7 +44,9 @@ O proprietário autorizou acesso público em 13/10/2026, aplicado à política d
 
 Manutenção: `POST /api/internal/reconcile` exige `Authorization: Bearer <PAYMENT_RECONCILE_TOKEN>`, aguarda lotes de até 20 pedidos e 20 retries e retorna apenas contadores. Uma falha individual não interrompe os demais; falhas retornam HTTP 503. O workflow `reconcile-payments.yml` no repositório GitHub usa o mesmo segredo via Actions, cron a cada cinco minutos e execução manual. GitHub pode atrasar ou descartar agendamentos e desativa schedules em repositórios públicos após 60 dias sem atividade; o cron não substitui o postback. Configure o segredo nos dois serviços antes de habilitar e valide com `workflow_dispatch`.
 
-Variáveis: `PAYMENT_API_TOKEN`, `PAYMENT_RECONCILE_TOKEN`, `UTMIFY_API_TOKEN`, `META_ACCESS_TOKEN`, `META_PIXEL_ID`, `META_API_VERSION` e `SHIPPING_AMOUNT_CENTS`. O modelo sem segredos está em `.env.example`. `UTMIFY_IS_TEST=true` é apenas para testes. Não alterar status de pedido para simular pagamento em produção.
+Compras Meta: `META_PURCHASE_SOURCE=direct` (padrão) mantém Purchase próprio via CAPI e navegador. `META_PURCHASE_SOURCE=utmify` delega Purchase exclusivamente à integração nativa da Utmify, que deve estar configurada com o mesmo Pixel e envio somente de pagamentos aprovados. Ative esse modo somente após configurar essa integração. O backend continua enviando pedidos e retries à Utmify com consentimento e confirmação autenticada do pagamento; não faz fallback para Meta em falhas. Retries Meta pendentes são encerrados com código `utmify_managed`, e respostas de pedidos omitem `purchaseEventId` para impedir Purchase no navegador. Eventos Meta anteriores à compra permanecem ativos. Nenhum SDK adicional da Utmify é necessário nesse fluxo.
+
+Variáveis: `PAYMENT_API_TOKEN`, `PAYMENT_RECONCILE_TOKEN`, `UTMIFY_API_TOKEN`, `META_ACCESS_TOKEN`, `META_PIXEL_ID`, `META_API_VERSION`, `META_PURCHASE_SOURCE` e `SHIPPING_AMOUNT_CENTS`. O modelo sem segredos está em `.env.example`. `UTMIFY_IS_TEST=true` é apenas para testes. Não alterar status de pedido para simular pagamento em produção.
 
 ## Verificação
 

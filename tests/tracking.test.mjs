@@ -1,5 +1,40 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+
+test('Utmify Purchase mode preserves nonpurchase Meta ingestion', async () => {
+  const calls = [];
+  const request = new Request('https://shop.test/api/events', {
+    method: 'POST', headers: { origin: 'https://shop.test', 'content-type': 'application/json' },
+    body: JSON.stringify({ eventName: 'PageView', eventId: 'page:test', tracking }),
+  });
+  const response = await handleTrackingRequest(request, { ...env, META_PURCHASE_SOURCE: 'utmify' }, {
+    fetchImpl: async (url, init) => { calls.push({ url, body: JSON.parse(init.body) }); return Response.json({}); },
+  });
+  assert.equal(response.status, 202);
+  assert.equal(calls.length, 1);
+  assert.ok(calls[0].url.includes('graph.facebook.com'));
+  assert.equal(calls[0].body.data[0].event_name, 'PageView');
+});
+
+
+test('Utmify-managed Purchase suppresses direct Meta on success and failure', async () => {
+  const managed = { ...env, META_PURCHASE_SOURCE: 'utmify' };
+  const paid = { ...order, status: 'paid', paidAt: order.createdAt };
+  for (const status of [200, 503]) {
+    const calls = [];
+    const result = await sendOrderTracking(paid, managed, { fetchImpl: async url => { calls.push(url); return new Response('{}', { status }); } });
+    assert.equal(calls.length, 1);
+    assert.ok(calls[0].includes('utmify.com.br'));
+    assert.deepEqual(result.meta, { success: true, retry: false, skipped: 'utmify_managed' });
+    assert.equal(result.utmify.success, status === 200);
+    assert.equal(result.utmify.retry, status === 503);
+  }
+  const skipped = await sendOrderTracking({ ...paid, tracking: { consent: false } }, managed, { fetchImpl: async () => { throw new Error('must not send'); } });
+  assert.equal(skipped.meta.skipped, 'no_consent');
+  assert.equal(skipped.utmify.skipped, 'no_consent');
+  await assert.rejects(sendOrderTracking({ ...paid, paidAt: undefined }, managed), /unconfirmed_payment/);
+});
+
 import { buildMetaEvent, buildUtmifyOrder, sendOrderTracking, handleTrackingRequest, purchaseEventId } from '../worker/tracking.mjs';
 import { createTracker, captureAttribution } from '../public/tracking.js';
 const env = { META_ACCESS_TOKEN: 'test-token', META_PIXEL_ID: '1146535704713953', META_API_VERSION: 'v26.0', UTMIFY_API_TOKEN: 'test-utm' };

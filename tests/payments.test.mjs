@@ -1,5 +1,42 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+
+test('Utmify mode suppresses browser Purchase and settles preexisting Meta retries', async () => {
+  const f = fixture(); f.state.status = 'paid'; f.state.metaFail = true;
+  const body = input(); body.tracking.consent = true;
+  const created = await f.request('/api/checkout', body);
+  assert.equal(created.body.purchaseEventId, 'purchase:' + created.body.id);
+  f.env.META_PURCHASE_SOURCE = 'utmify';
+  f.sqlite.exec('UPDATE payment_tracking SET next_attempt_at = 0');
+  assert.equal((await retryPaymentTracking(f.env)).failed, 0);
+  const meta = f.sqlite.prepare("SELECT state, code FROM payment_tracking WHERE provider = 'meta'").get();
+  assert.equal(meta.state, 'sent'); assert.equal(meta.code, 'utmify_managed');
+  const recovered = await f.request('/api/orders/' + created.body.id);
+  const duplicate = await f.request('/api/checkout', body);
+  assert.equal(Object.hasOwn(recovered.body, 'purchaseEventId'), false);
+  assert.equal(Object.hasOwn(duplicate.body, 'purchaseEventId'), false);
+  assert.equal(f.state.tracking.filter(t => t.url.includes('facebook')).length, 1);
+});
+test('Utmify mode fresh paid order omits browser Purchase and preserves failed delivery retries', async () => {
+  const f = fixture(); f.state.status = 'paid'; f.env.META_PURCHASE_SOURCE = 'utmify';
+  let failed = true;
+  f.env.TRACKING_FETCH = async url => {
+    assert.ok(url.includes('utmify.com.br'));
+    return Response.json({}, { status: failed ? 503 : 200 });
+  };
+  const body = input(); body.tracking.consent = true;
+  const created = await f.request('/api/checkout', body);
+  assert.equal(created.body.status, 'paid');
+  assert.equal(Object.hasOwn(created.body, 'purchaseEventId'), false);
+  f.sqlite.exec('UPDATE payment_tracking SET next_attempt_at = 0');
+  const result = await reconcilePayments(f.env);
+  assert.equal(result.ok, false); assert.equal(result.trackingFailed, 1);
+  failed = false;
+  f.sqlite.exec('UPDATE payment_tracking SET next_attempt_at = 0');
+  assert.equal((await retryPaymentTracking(f.env)).failed, 0);
+  assert.equal(f.sqlite.prepare("SELECT state FROM payment_tracking WHERE provider = 'utmify'").get().state, 'sent');
+});
+
 import { DatabaseSync } from 'node:sqlite';
 import { readFileSync } from 'node:fs';
 import { handlePaymentRequest, reconcilePayments, retryPaymentTracking, validCPF } from '../worker/payments.mjs';

@@ -87,7 +87,9 @@ export async function sendOrderTracking(order, env, options = {}) {
     ? await deliver('https://api.utmify.com.br/api-credentials/orders', payload, { 'x-api-token': env.UTMIFY_API_TOKEN }, options.fetchImpl)
     : { success: false, retry: false, code: 'not_configured' };
   let meta = { success: true, retry: false, skipped: options.skipMeta ? 'already_sent' : 'not_paid' };
-  if (order.status === 'paid' && !options.skipMeta) {
+  if (order.status === 'paid' && env.META_PURCHASE_SOURCE === 'utmify') {
+    meta = { success: true, retry: false, skipped: 'utmify_managed' };
+  } else if (order.status === 'paid' && !options.skipMeta) {
     const event = await buildMetaEvent({ eventName: 'Purchase', eventId: purchaseEventId(order.id), tracking: order.tracking, items: order.items, valueCents: order.totalCents }, { customer: order.customer, clientIp: order.clientIp, userAgent: order.userAgent, now: new Date(order.paidAt).getTime() });
     meta = await sendMetaEvent(event, env, options);
   }
