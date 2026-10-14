@@ -23,6 +23,13 @@ function fixture({ bottom = 400, disabled = false, observer = true } = {}) {
 }
 const product = { name: 'Capacete <Norisk>', price: 200, variants: [{ size: '58', price: 220 }, { size: '60', available: false }] };
 
+test('ProtectCar sticky purchase labels the selected kit without size instructions', () => {
+  const f = fixture();
+  mountProductSticky({ product: {...product, id:'protectcar-bandeja-3d', configurationType:'protectcar'}, selectedSize:'Carro — kit interno', ...f });
+  assert.match(f.bar.innerHTML, /Kit: Carro/);
+  assert.doesNotMatch(f.bar.innerHTML, /Tamanho|Escolher tamanho/);
+});
+
 test('only appears after passing primary CTA; restores focus and disposes all hooks', () => {
   const f = fixture();
   const cleanup = mountProductSticky({ product, selectedSize: '58', ...f });

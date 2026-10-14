@@ -4,6 +4,7 @@ export const normalize = value => String(value ?? '').normalize('NFD').replace(/
 export const brandText = value => String(value ?? '').replace(/\b(?:norisk|nolimit|no limite)\b/gi, 'Norisk');
 // Keep editions and compatibility codes; variant attributes belong beside the title.
 export function productTitle(product) {
+  if (product.id === 'protectcar-bandeja-3d' && product.configurationType === 'protectcar') return 'Tapete Bandeja 3D ProtectCar';
   const fullName = brandText(product.fullName || product.name || 'Produto Norisk');
   const variantWords = /^(?:pret[oa]s?|branc[oa]s?|cinza|azul|verde|rox[oa]|rosa|amarel[oa]|vermelh[oa]|laranja|dourad[oa]|prata|fume|cristal|transparente|camaleao|espelhad[oa]|espelahda|revo|brilho|fosco|matte|clear|nardo|navy|titanium|monocolor|importado)$/;
   let title = fullName.replace(/\b(?:tam(?:anho)?\.?\s*:?\s*)(?:\d{2}|[PMGUXL]{1,4})\b/gi, '')
@@ -52,6 +53,7 @@ export function filterProducts(products, filters = {}) {
 export function productImage(product, manifest = {}, index = 0) {
   const candidate = product.images?.[index];
   const original = typeof candidate === 'string' ? candidate : candidate?.url;
+  if (product.id === 'protectcar-bandeja-3d' && product.configurationType === 'protectcar' && /^\/assets\/protectcar\/[a-z0-9-]+\.webp$/.test(original || '')) return original;
   const resolved = manifest.byUrl?.[original];
   if (['edited','clean'].includes(resolved?.status) && /^\/assets\//.test(resolved.url)) return resolved.url;
   if (resolved?.status === 'original' && /^(\/assets\/|https:\/\/)/.test(resolved.url)) return resolved.url;

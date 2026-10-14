@@ -1,4 +1,5 @@
 import { escapeHTML, money, priceOf } from './catalog-utils.js';
+import { isProtectCar } from './protectcar-config.js';
 
 // Mount after the primary CTA is configured; dispose before every page render.
 export function mountProductSticky({ product, selectedSize = '', price = priceOf(product, selectedSize), root = document, view = window }) {
@@ -11,7 +12,8 @@ export function mountProductSticky({ product, selectedSize = '', price = priceOf
   const variant = product.variants?.find(item => String(item.size) === String(selectedSize));
   const unavailable = selectedSize && (variant?.available === false || (product.variants?.length && !variant));
   const hasPrice = price !== null && price !== undefined && Number.isFinite(Number(price)) && Number(price) > 0;
-  bar.innerHTML = `<div class="product-sticky-inner"><div class="product-sticky-info"><strong>${escapeHTML(product.name)}</strong><span>${escapeHTML(hasPrice ? money(price) : 'Preço em preparação')} · ${escapeHTML(selectedSize ? `Tamanho ${selectedSize}${unavailable ? ' indisponível' : ''}` : 'Escolha o tamanho')}</span></div><button type="button" class="button button-blue product-sticky-buy">${hasPrice ? (selectedSize && !unavailable ? 'Comprar no Pix' : 'Escolher tamanho') : 'Preço em preparação'}</button></div>`;
+  const configured = isProtectCar(product);
+  bar.innerHTML = `<div class="product-sticky-inner"><div class="product-sticky-info"><strong>${escapeHTML(product.name)}</strong><span>${escapeHTML(hasPrice ? money(price) : 'Preço em preparação')} · ${escapeHTML(selectedSize ? `${configured ? 'Kit: ' : 'Tamanho '}${selectedSize}${unavailable ? ' indisponível' : ''}` : configured ? 'Configure seu veículo' : 'Escolha o tamanho')}</span></div><button type="button" class="button button-blue product-sticky-buy">${hasPrice ? (selectedSize && !unavailable ? 'Comprar no Pix' : configured ? 'Configurar veículo' : 'Escolher tamanho') : 'Preço em preparação'}</button></div>`;
   const buy = bar.querySelector('button');
   buy.disabled = primary.disabled || !hasPrice;
   const activate = () => {

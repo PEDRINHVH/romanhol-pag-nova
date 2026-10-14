@@ -5,6 +5,8 @@ import vm from 'node:vm';
 import {validateCheckoutForm as validateFields, validationError} from '../public/checkout-validation.js';
 import {escapeHTML, money, priceOf} from '../public/catalog-utils.js';
 import {renderCheckoutItems, renderCheckoutGift, changeCheckoutCart} from '../public/checkout-cart.js';
+import {configurationKey} from '../public/protectcar-config.js';
+import {PROTECTCAR_PRODUCT, PROTECTCAR_KITS, PROTECTCAR_VEHICLES} from '../public/protectcar-data.js';
 
 const shippingSource = readFileSync(new URL('../public/product-shipping.js', import.meta.url), 'utf8').replace(/\bexport /g, '');
 
@@ -38,7 +40,7 @@ function fixture({store=new Map(), realValidation=false, fetch=async()=>response
   const form={id:'pix-checkout',querySelector:query};
   const controls={'.checkout-submit':{dataset:{totalCents:'10000'}},'[data-config-error]':{},'[data-retry-config]':{hidden:true}};
   const sandbox={
-    e:escapeHTML,money,priceOf,renderCheckoutItems,renderCheckoutGift,changeCheckoutCart,console,URL,AbortController,__importQr:importQr,
+    e:escapeHTML,money,priceOf,renderCheckoutItems,renderCheckoutGift,changeCheckoutCart,configurationKey,console,URL,AbortController,__importQr:importQr,
     mountAddressAutofill:()=>()=>{},mountCheckoutValidation:()=>()=>{},validationError,
     validateCheckoutForm:realValidation?validateFields:()=>true,
     location:{hash:'#/checkout'}, navigator:{clipboard:{writeText:async()=>{}}},
@@ -67,7 +69,7 @@ function fixture({store=new Map(), realValidation=false, fetch=async()=>response
   evaluate('configureCheckout')({getCart:()=>cart,setCart:next=>cart.splice(0,cart.length,...next),getProducts:()=>products,render:()=>{renders++;page();},toast:()=>{},tracker:{track:()=>{},purchase:()=>{},getContext:()=>({consent:false})}});
   page();
   const advance=async()=>{for(const handler of events.get('submit')||[])await handler({target:form,preventDefault(){}});};
-  return {cart,store,page,evaluate,controls,focused,advance,
+  return {cart,products,store,page,evaluate,controls,focused,advance,
     get renders(){return renders;},get html(){return html;},
     setFields:next=>{fields={...next};},
     state:()=>JSON.parse(evaluate('JSON.stringify({attempt,order,draft,busy,message,giftWrap,shippingMethod,checkoutStep})')),
@@ -129,6 +131,23 @@ test('refused payment review keeps the original customer fields', async()=>{
   assert.match(f.page(),/name="name" value="Maria Silva"/);
   assert.match(f.html,/name="email" value="maria@example.com"/);
   assert.match(f.html,/name="street" value="Avenida Paulista"/);
+});
+
+test('configured cart signature, request and persisted retry include the vehicle', async()=>{
+  const requests=[],store=new Map();
+  const f=fixture({store,fetch:async(path,options)=>{requests.push(JSON.parse(options.body));throw new Error('response lost');}});
+  const brand=Object.keys(PROTECTCAR_VEHICLES)[0],vehicle=PROTECTCAR_VEHICLES[brand][0];
+  const configuration={vehicleType:'carro',brand,model:vehicle.model,year:String(vehicle.from),color:'Preto',texture:'Circuito / Tech'};
+  f.products.push(PROTECTCAR_PRODUCT);
+  f.cart.splice(0,1,{id:PROTECTCAR_PRODUCT.id,size:PROTECTCAR_KITS[0].size,qty:1,configuration});
+  f.page();f.ready();
+  await f.submit();
+  const saved=JSON.parse(store.get('nolimit:checkout:attempt'));
+  assert.deepEqual(requests[0].items[0].configuration,configuration);
+  assert.deepEqual(saved.orderRequest.items[0].configuration,configuration);
+  f.cart[0]={...f.cart[0],configuration:{...configuration,color:'Bege'}};
+  f.page();
+  assert.equal(f.state().attempt,null);
 });
 
 test('lost creation response retries its frozen payload after edits and reload', async()=>{

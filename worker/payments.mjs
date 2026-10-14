@@ -1,4 +1,5 @@
 import { checkoutItems, catalogProduct } from './catalog.mjs';
+import { configurationLabel, isProtectCar } from '../public/protectcar-config.js';
 import { sendOrderTracking, purchaseEventId } from './tracking.mjs';
 import { storefrontOrigin, storefrontClientIp } from './storefront-origin.mjs';
 
@@ -107,11 +108,14 @@ async function productMapping(env, item, origin) {
   try {
     const product = catalogProduct(item.id);
     const cover = product.images?.[0];
-    const created = await gateway(env, 'POST', '/products', { title: product.name, payment_type: 1, product_type: 'fisico', id_category: 6, amount: item.unitPriceCents, cover: typeof cover === 'string' ? cover : cover?.url, sale_page: `${origin}/produto/${encodeURIComponent(product.slug)}` });
+    const coverPath = typeof cover === 'string' ? cover : cover?.url;
+    const configured = isProtectCar(product);
+    const coverUrl = configured && coverPath ? new URL(coverPath, origin).href : coverPath;
+    const created = await gateway(env, 'POST', '/products', { title: product.name, payment_type: 1, product_type: 'fisico', id_category: 6, amount: item.unitPriceCents, cover: coverUrl, sale_page: `${origin}/${configured ? '#/' : ''}produto/${encodeURIComponent(product.slug)}` });
     if (typeof created.hash !== 'string' || !/^[\w-]{1,100}$/.test(created.hash)) throw new PaymentError('gateway_uncertain', 502);
     await query(env.DB, 'UPDATE payment_products SET product_hash = ?, updated_at = ? WHERE product_id = ?', created.hash, Date.now(), item.id).run();
     let offer = created.offers?.find(value => value.hash && value.status !== 0);
-    if (!offer) offer = await gateway(env, 'POST', `/products/${encodeURIComponent(created.hash)}/offers`, { title: `${product.name} — Pix`, amount: item.unitPriceCents, cover: typeof cover === 'string' ? cover : cover?.url });
+    if (!offer) offer = await gateway(env, 'POST', `/products/${encodeURIComponent(created.hash)}/offers`, { title: `${product.name} — Pix`, amount: item.unitPriceCents, cover: coverUrl });
     if (typeof offer.hash !== 'string' || !/^[\w-]{1,100}$/.test(offer.hash)) throw new PaymentError('gateway_uncertain', 502);
     await query(env.DB, "UPDATE payment_products SET offer_hash = ?, state = 'ready', updated_at = ? WHERE product_id = ?", offer.hash, Date.now(), item.id).run();
     return { product_hash: created.hash, offer_hash: offer.hash };
@@ -122,7 +126,7 @@ async function productMapping(env, item, origin) {
 }
 export function publicOrder(order, env = {}) {
   const shipping = SHIPPING_OPTIONS.find(option => option.id === order.shippingMethod) || SHIPPING_OPTIONS[0];
-  return { id: order.id, status: order.status, retryAllowed: order.status === 'refused', totalCents: order.totalCents, subtotalCents: order.subtotalCents, shippingCents: order.shippingCents, giftWrap: order.giftWrap === true, shippingMethod: shipping.id, shippingLabel: order.shippingLabel || shipping.label, shippingDeliveryEstimate: order.shippingDeliveryEstimate || shipping.deliveryEstimate, items: order.items.map(({ id, name, size, quantity, unitPriceCents }) => ({ id, name, size, quantity, unitPriceCents })), pix: order.pix || null, createdAt: order.createdAt, paidAt: order.paidAt || null, ...(order.status === 'paid' && env.META_PURCHASE_SOURCE !== 'utmify' ? { purchaseEventId: purchaseEventId(order.id) } : {}) };
+  return { id: order.id, status: order.status, retryAllowed: order.status === 'refused', totalCents: order.totalCents, subtotalCents: order.subtotalCents, shippingCents: order.shippingCents, giftWrap: order.giftWrap === true, shippingMethod: shipping.id, shippingLabel: order.shippingLabel || shipping.label, shippingDeliveryEstimate: order.shippingDeliveryEstimate || shipping.deliveryEstimate, items: order.items.map(({ id, name, size, quantity, unitPriceCents, configuration }) => ({ id, name, size, quantity, unitPriceCents, ...(configuration ? { configuration } : {}) })), pix: order.pix || null, createdAt: order.createdAt, paidAt: order.paidAt || null, ...(order.status === 'paid' && env.META_PURCHASE_SOURCE !== 'utmify' ? { purchaseEventId: purchaseEventId(order.id) } : {}) };
 }
 async function saveOrder(env, order) {
   await query(env.DB, 'UPDATE payment_orders SET status = ?, provider_hash = ?, data_json = ?, updated_at = ? WHERE id = ?', order.status, order.providerHash || null, JSON.stringify(order), Date.now(), order.id).run();
@@ -214,7 +218,7 @@ async function checkout(request, env, ctx) {
     for (const item of items) mapped.push(await productMapping(env, item, origin));
     const address = customer.address;
     const fulfillmentNote = ` | ${shipping.label}: ${shipping.deliveryEstimate}, ${shippingCents ? 'R$ 57,81' : 'grátis'}${giftWrap ? ' | Presente grátis' : ''}`;
-    const payload = { amount: totalCents, offer_hash: mapped[0].offer_hash, payment_method: 'pix', installments: 1, customer: { name: customer.name, email: customer.email, phone_number: customer.phone, document: customer.document, street_name: address.street, number: address.number, complement: address.complement, neighborhood: address.neighborhood, city: address.city, state: address.state, zip_code: address.zipCode }, cart: items.map((item, index) => ({ product_hash: mapped[index].product_hash, title: `${item.name} — ${item.size}${index === 0 ? fulfillmentNote : ''}`, price: item.unitPriceCents, quantity: item.quantity, operation_type: 1, tangible: true })), transaction_origin: 'api', expire_in_days: 1, tracking: order.tracking.attribution, postback_url: new URL('/api/payment/postback', request.url).href };
+    const payload = { amount: totalCents, offer_hash: mapped[0].offer_hash, payment_method: 'pix', installments: 1, customer: { name: customer.name, email: customer.email, phone_number: customer.phone, document: customer.document, street_name: address.street, number: address.number, complement: address.complement, neighborhood: address.neighborhood, city: address.city, state: address.state, zip_code: address.zipCode }, cart: items.map((item, index) => ({ product_hash: mapped[index].product_hash, title: `${item.name} — ${item.size}${item.configuration ? ` — ${configurationLabel(item.configuration)}` : ''}${index === 0 ? fulfillmentNote : ''}`, price: item.unitPriceCents, quantity: item.quantity, operation_type: 1, tangible: true })), transaction_origin: 'api', expire_in_days: 1, tracking: order.tracking.attribution, postback_url: new URL('/api/payment/postback', request.url).href };
     dispatched = true;
     const transaction = await gateway(env, 'POST', '/transactions', payload);
     if (typeof transaction.hash !== 'string' || !/^[\w-]{1,100}$/.test(transaction.hash)) throw new PaymentError('gateway_uncertain', 502);

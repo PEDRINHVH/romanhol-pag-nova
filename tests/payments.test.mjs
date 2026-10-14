@@ -42,6 +42,45 @@ import { readFileSync } from 'node:fs';
 import { handlePaymentRequest, reconcilePayments, retryPaymentTracking, validCPF } from '../worker/payments.mjs';
 import { handleMaintenanceRequest } from '../worker/maintenance.mjs';
 import { checkoutItems } from '../worker/catalog.mjs';
+import { PROTECTCAR_PRODUCT, PROTECTCAR_KITS, PROTECTCAR_VEHICLES } from '../public/protectcar-data.js';
+import { configurationLabel } from '../public/protectcar-config.js';
+
+test('configured mats preserve fulfillment details in storage, response, gateway and idempotency', async () => {
+  const f = fixture();
+  const brand = Object.keys(PROTECTCAR_VEHICLES)[0], vehicle = PROTECTCAR_VEHICLES[brand][0];
+  const configuration = {vehicleType:'carro',brand,model:vehicle.model,year:String(vehicle.from),color:'Preto',texture:'Circuito / Tech'};
+  const original = f.env.PAYMENT_FETCH;
+  const registrations = [];
+  f.env.PAYMENT_FETCH = async (url, options) => {
+    const path = new URL(url).pathname;
+    if (path.endsWith('/products') || path.endsWith('/products/mat-product/offers')) {
+      const payload = JSON.parse(options.body);
+      registrations.push(payload);
+      assert.equal(payload.cover, origin + '/assets/protectcar/produto.webp');
+      if (path.endsWith('/products')) {
+        assert.equal(payload.sale_page, `${origin}/#/produto/${PROTECTCAR_PRODUCT.slug}`);
+        return Response.json({hash:'mat-product'});
+      }
+      return Response.json({hash:'mat-offer'});
+    }
+    return original(url, options);
+  };
+  f.state.amount = f.state.createAmount = 9783;
+  const body = input();
+  body.items = [{id:PROTECTCAR_PRODUCT.id,size:PROTECTCAR_KITS[0].size,quantity:1,configuration,unitPriceCents:1}];
+  const result = await f.request('/api/checkout',body);
+  assert.equal(result.status,201);
+  assert.equal(registrations.length,2);
+  assert.equal(result.body.totalCents,9783);
+  assert.deepEqual(result.body.items[0].configuration,configuration);
+  assert.ok(f.state.posts[0].cart[0].title.includes(configurationLabel(configuration)));
+  const saved = JSON.parse(f.sqlite.prepare('SELECT data_json FROM payment_orders').get().data_json);
+  assert.deepEqual(saved.items[0].configuration,configuration);
+  assert.deepEqual((await f.request('/api/orders/'+result.body.id)).body.items[0].configuration,configuration);
+  body.items[0].configuration.color = 'Bege';
+  assert.equal((await f.request('/api/checkout',body)).status,409);
+  assert.equal(f.state.posts.length,1);
+});
 
 const origin = 'https://shop.example';
 const customer = { name: 'Maria Silva', email: 'maria@example.com', phone: '11987654321', document: '52998224725', address: { zipCode: '01310100', street: 'Avenida Paulista', number: '100', complement: '', neighborhood: 'Bela Vista', city: 'São Paulo', state: 'SP' } };

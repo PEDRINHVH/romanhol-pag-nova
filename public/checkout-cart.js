@@ -1,11 +1,12 @@
-import {escapeHTML as e, money, priceOf, productTitle} from './catalog-utils.js?v=20261014-norisk-products';
+import {escapeHTML as e, money, priceOf, productTitle} from './catalog-utils.js?v=20261014-protectcar';
+import {isProtectCar, normalizeConfiguration, configurationKey, configurationLabel} from './protectcar-config.js';
 
 const MAX_QUANTITY = 10;
 const availableSizes = product => (product.variants || []).filter(variant => variant.available !== false && priceOf(product, variant.size) > 0);
 
-export function changeCheckoutCart(cart, products, {type, id, size, value}) {
+export function changeCheckoutCart(cart, products, {type, id, size, value, configuration, configurationKey: key}) {
   const reject = message => ({cart, changed:false, message});
-  const index = cart.findIndex(line => String(line.id) === String(id) && String(line.size) === String(size));
+  const index = cart.findIndex(line => String(line.id) === String(id) && String(line.size) === String(size) && configurationKey(line.configuration) === (key ?? configurationKey(configuration)));
   if (index < 0) return reject('Este item não está mais na sacola.');
   const line = cart[index];
   if (type === 'remove') return {cart:cart.filter((_, i) => i !== index), changed:true, message:'Item removido da sacola.'};
@@ -16,6 +17,10 @@ export function changeCheckoutCart(cart, products, {type, id, size, value}) {
   }
   const product = products.find(item => String(item.id) === String(id));
   if (!product) return reject('Produto indisponível.');
+  if (isProtectCar(product)) {
+    try { normalizeConfiguration(product, size, line.configuration); } catch { return reject('Configuração do veículo inválida. Selecione novamente o produto.'); }
+    if (type === 'size') return reject('Para alterar o kit, configure novamente o produto.');
+  }
   if (type === 'increase') {
     if (!availableSizes(product).some(variant => String(variant.size) === String(size))) return reject('Tamanho indisponível.');
     if (line.qty === MAX_QUANTITY) return reject('Limite de 10 unidades por tamanho.');
@@ -32,13 +37,14 @@ export function changeCheckoutCart(cart, products, {type, id, size, value}) {
 }
 
 export function renderCheckoutItems(lines, {media = () => '', locked = false} = {}) {
-  return lines.map(({id, size, qty, product}) => {
-    const title = productTitle(product), description = [product.color, product.finish].filter(Boolean).join(' · ');
-    const attributes = `data-product-id="${e(id)}" data-size="${e(size)}"`;
-    const label = `${title}, tamanho ${size}`;
+  return lines.map(({id, size, qty, product, configuration}) => {
+    const configured = isProtectCar(product);
+    const title = productTitle(product), description = configured ? configurationLabel(configuration) : [product.color, product.finish].filter(Boolean).join(' · ');
+    const attributes = `data-product-id="${e(id)}" data-size="${e(size)}" data-configuration-key="${e(configurationKey(configuration))}"`;
+    const label = configured ? `${title}, ${size}, ${description}` : `${title}, tamanho ${size}`;
     const sizes = availableSizes(product), currentAvailable = sizes.some(variant => String(variant.size) === String(size));
     const button = (action, text, accessible, disabled = false) => `<button type="button" data-checkout-action="${action}" ${attributes} aria-label="${e(`${accessible}: ${label}`)}"${locked || disabled ? ' disabled' : ''}>${text}</button>`;
-    return `<div class="checkout-item checkout-cart-item"><div class="checkout-thumb">${media(product)}</div><div class="checkout-cart-description"><h3>${e(title)}</h3>${description ? `<p>${e(description)}</p>` : ''}<strong class="checkout-cart-price">${money(priceOf(product, size) * qty)}</strong></div><div class="checkout-cart-controls"><label class="checkout-cart-size"><span>Tamanho</span><select data-checkout-action="size" ${attributes} aria-label="${e(`Tamanho: ${label}`)}"${locked ? ' disabled' : ''}>${!currentAvailable ? `<option value="${e(size)}" selected disabled>${e(size)} — indisponível</option>` : ''}${sizes.map(variant => `<option value="${e(variant.size)}"${String(variant.size) === String(size) ? ' selected' : ''}>${e(variant.size)}</option>`).join('')}</select></label><div class="checkout-cart-quantity" role="group" aria-label="${e(`Quantidade: ${label}`)}">${button('decrease', '−', 'Diminuir quantidade', qty <= 1)}<span aria-label="${e(`${qty} unidades`)}">${qty}</span>${button('increase', '+', 'Aumentar quantidade', qty >= MAX_QUANTITY || !currentAvailable)}</div>${button('remove', 'Remover', 'Remover')}</div></div>`;
+    return `<div class="checkout-item checkout-cart-item"><div class="checkout-thumb">${media(product)}</div><div class="checkout-cart-description"><h3>${e(title)}</h3>${description ? `<p>${e(description)}</p>` : ''}<strong class="checkout-cart-price">${money(priceOf(product, size) * qty)}</strong></div><div class="checkout-cart-controls">${configured ? `<p class="checkout-cart-size"><span>Kit</span><strong>${e(size)}</strong></p>` : `<label class="checkout-cart-size"><span>Tamanho</span><select data-checkout-action="size" ${attributes} aria-label="${e(`Tamanho: ${label}`)}"${locked ? ' disabled' : ''}>${!currentAvailable ? `<option value="${e(size)}" selected disabled>${e(size)} — indisponível</option>` : ''}${sizes.map(variant => `<option value="${e(variant.size)}"${String(variant.size) === String(size) ? ' selected' : ''}>${e(variant.size)}</option>`).join('')}</select></label>`}<div class="checkout-cart-quantity" role="group" aria-label="${e(`Quantidade: ${label}`)}">${button('decrease', '−', 'Diminuir quantidade', qty <= 1)}<span aria-label="${e(`${qty} unidades`)}">${qty}</span>${button('increase', '+', 'Aumentar quantidade', qty >= MAX_QUANTITY || !currentAvailable)}</div>${button('remove', 'Remover', 'Remover')}</div></div>`;
   }).join('');
 }
 

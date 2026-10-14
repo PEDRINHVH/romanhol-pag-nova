@@ -22,6 +22,8 @@ Ao adicionar um produto ou uma viseira pela página do produto, a loja redirecio
 
 ## Catálogo e preços
 
+O Tapete Bandeja 3D ProtectCar é cadastrado separadamente em `public/protectcar-data.js`, preservado nas regenerações do catálogo Norisk. Somente esse produto usa configuração de veículo (tipo, marca, modelo, ano, cor e textura) e comparadores de antes/depois na descrição. Os quatro kits custam R$ 97,83, R$ 123,50, R$ 138,90 e R$ 167,96; o servidor valida as escolhas e registra a configuração no pedido. Dados e imagens de referência: `https://www.lojaprotectcar.com/`, consultados em 14/10/2026. A lista de veículos representa as opções dessa referência, sem sincronização contínua de estoque ou compatibilidade.
+
 - Toda a linha de capacetes Force II: R$ 179,90, inclusive variações.
 - Demais produtos: preço Pix de referência multiplicado por `179.90 / 854.90`, arredondado a dois decimais. Quando a API não informa Pix, o importador aplica a condição de 5% à vista apresentada pela origem.
 - Variações podem ter preços diferentes. O preço exibido antes da escolha é o menor valor do produto.

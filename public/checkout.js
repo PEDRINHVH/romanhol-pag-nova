@@ -1,7 +1,8 @@
-import {escapeHTML as e, money, priceOf} from './catalog-utils.js?v=20261014-norisk-products';
-import {renderCheckoutItems, renderCheckoutGift, changeCheckoutCart} from './checkout-cart.js?v=20261014-cart-shipping';
+import {escapeHTML as e, money, priceOf} from './catalog-utils.js?v=20261014-protectcar';
+import {renderCheckoutItems, renderCheckoutGift, changeCheckoutCart} from './checkout-cart.js?v=20261014-protectcar';
 import {SHIPPING_OPTIONS, getShippingQuote, getShippingMethod, updateShippingMethod} from './product-shipping.js?v=20261014-cart-shipping';
 import {mountAddressAutofill} from './address-autofill.js';
+import {configurationKey} from './protectcar-config.js';
 import {mountCheckoutValidation, validateCheckoutForm, validationError} from './checkout-validation.js?v=20261014-phone-mask';
 
 const sessionKey = 'nolimit:checkout:attempt';
@@ -23,7 +24,7 @@ const stepLabels=['Seus dados','Endereço','Frete','Pagamento'];
 const cartLocked = () => busy || !!order || !!attempt?.orderRequest || !!attempt?.orderId;
 const delivery = () => SHIPPING_OPTIONS.find(option=>option.id===shippingMethod) || SHIPPING_OPTIONS[0];
 const signature = cart => {
-  const items=cart.map(({id,size,qty})=>[id,size,qty]).sort();
+  const items=cart.map(({id,size,qty,configuration})=>configuration?[id,size,qty,configurationKey(configuration)]:[id,size,qty]).sort();
   return JSON.stringify(giftWrap||shippingMethod!=='standard'?{items,giftWrap,shippingMethod}:items);
 };
 const deliveryChoices = locked => `<fieldset class="checkout-delivery" ${locked?'disabled':''}><legend>Entrega</legend>${SHIPPING_OPTIONS.map(option=>`<label><input type="radio" name="checkout-delivery" data-checkout-shipping value="${option.id}" ${shippingMethod===option.id?'checked':''}><span><strong>${e(option.label)}</strong><small>${e(option.days)}</small></span><b>${option.cents?money(option.cents/100):'Grátis'}</b></label>`).join('')}</fieldset>`;
@@ -34,7 +35,7 @@ function updateCart(change) {
   if(result.changed){
     hooks.setCart(result.cart);refresh();
     const controls=Array.from(document.querySelectorAll('[data-checkout-action]'));
-    const focus=controls.find(control=>control.dataset.productId===change.id&&control.dataset.size===(change.type==='size'?change.value:change.size)&&control.dataset.checkoutAction===change.type);
+    const focus=controls.find(control=>control.dataset.productId===change.id&&control.dataset.size===(change.type==='size'?change.value:change.size)&&control.dataset.configurationKey===(change.configurationKey??'')&&control.dataset.checkoutAction===change.type);
     (focus || document.querySelector('.checkout-items summary') || document.querySelector('.checkout-empty a'))?.focus({preventScroll:true});
   }
   if(result.message)hooks.toast(result.message);
@@ -187,7 +188,7 @@ export async function mountCheckout(){
 document.addEventListener('change',event=>{
   const target=event.target;
   if(target.matches('[data-checkout-action="size"]')){
-    updateCart({type:'size',id:target.dataset.productId,size:target.dataset.size,value:target.value});return;
+    updateCart({type:'size',id:target.dataset.productId,size:target.dataset.size,value:target.value,configurationKey:target.dataset.configurationKey});return;
   }
   if(!target.matches('[data-checkout-gift],[data-checkout-shipping]'))return;
   if(cartLocked()){refresh();return;}
@@ -205,7 +206,7 @@ document.addEventListener('change',event=>{
 document.addEventListener('click',event=>{
   if(event.target.closest('[data-checkout-back]')&&!cartLocked()&&checkoutStep>1){setCheckoutStep(checkoutStep-1);return;}
   const target=event.target.closest('button[data-checkout-action]');
-  if(target)updateCart({type:target.dataset.checkoutAction,id:target.dataset.productId,size:target.dataset.size});
+  if(target)updateCart({type:target.dataset.checkoutAction,id:target.dataset.productId,size:target.dataset.size,configurationKey:target.dataset.configurationKey});
 });
 document.addEventListener('input',event=>{if(event.target.closest('#pix-checkout'))draft[event.target.name]=event.target.value;});
 document.addEventListener('submit',async event=>{
@@ -231,7 +232,7 @@ document.addEventListener('submit',async event=>{
   const clean=value=>String(value||'').replace(/\D/g,'');
   const customer={name:draft.name,email:draft.email,phone:clean(draft.phone),document:clean(draft.document),address:{zipCode:clean(draft.zipCode),street:draft.street,number:draft.number,complement:draft.complement||'',neighborhood:draft.neighborhood,city:draft.city,state:String(draft.state||'').toUpperCase()}};
   const recovering=!!attempt.orderRequest;
-  if(!recovering)attempt.orderRequest={idempotencyKey:attempt.idempotencyKey,items:cart.map(line=>({id:line.id,size:line.size,quantity:line.qty})),customer,giftWrap,shippingMethod,tracking:hooks.tracker.getContext()};
+  if(!recovering)attempt.orderRequest={idempotencyKey:attempt.idempotencyKey,items:cart.map(line=>({id:line.id,size:line.size,quantity:line.qty,...(line.configuration?{configuration:line.configuration}:{})})),customer,giftWrap,shippingMethod,tracking:hooks.tracker.getContext()};
   const pending=attempt;
   persist();busy=true;message='';refresh();
   if(!recovering){const items=itemsFor(cart,products);hooks.tracker.track('AddPaymentInfo',{items,valueCents:items.reduce((s,i)=>s+i.quantity*i.unitPriceCents,0)+delivery().cents});}
