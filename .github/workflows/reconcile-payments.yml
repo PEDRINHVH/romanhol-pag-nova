@@ -1,0 +1,40 @@
+name: Reconcile payments
+
+on:
+  schedule:
+    - cron: '2-59/5 * * * *'
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: payment-reconciliation
+  cancel-in-progress: false
+
+jobs:
+  reconcile:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - name: Reconcile pending payments and retry delivery
+        env:
+          RECONCILE_URL: https://nolimit-capacetes.tarcalmix.chatgpt.site/api/internal/reconcile
+          RECONCILE_TOKEN: ${{ secrets.PAYMENT_RECONCILE_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$RECONCILE_TOKEN" || { echo 'Missing maintenance token'; exit 1; }
+          case "$RECONCILE_URL" in
+            https://*/api/internal/reconcile) ;;
+            *) echo 'Missing or invalid maintenance URL'; exit 1 ;;
+          esac
+          response_file=$(mktemp)
+          trap 'rm -f "$response_file"' EXIT
+          status=$(curl --silent --show-error --fail-with-body \
+            --proto '=https' --connect-timeout 15 --max-time 180 \
+            --request POST --header "Authorization: Bearer $RECONCILE_TOKEN" \
+            --header 'Content-Type: application/json' --data '{}' \
+            --output "$response_file" --write-out '%{http_code}' "$RECONCILE_URL")
+          test "$status" = 200 || { echo "Unexpected HTTP status: $status"; exit 1; }
+          jq -e '.ok == true' "$response_file" >/dev/null
+          echo 'Payment reconciliation completed'

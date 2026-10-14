@@ -42,7 +42,9 @@ Meta Pixel + CAPI cobrem PageView, ViewContent, Search, AddToWishlist, AddToCart
 
 O proprietário autorizou acesso público em 13/10/2026, aplicado à política do Site. Callbacks externos precisam alcançar a aplicação sem login: confirmar que o dispatch aceita requisições anônimas após cada alteração de acesso. O polling no checkout funciona; confirmação após fechar a página exige callback acessível ou agendamento real do reconciliador. O handler `scheduled` existe, mas não há cron provisionado pelo manifest. Não tratar um callback de teste vazio como comprovação de pagamento real.
 
-Variáveis: `PAYMENT_API_TOKEN`, `UTMIFY_API_TOKEN`, `META_ACCESS_TOKEN`, `META_PIXEL_ID`, `META_API_VERSION` e `SHIPPING_AMOUNT_CENTS`. O modelo sem segredos está em `.env.example`. `UTMIFY_IS_TEST=true` é apenas para testes. Não alterar status de pedido para simular pagamento em produção.
+Manutenção: `POST /api/internal/reconcile` exige `Authorization: Bearer <PAYMENT_RECONCILE_TOKEN>`, aguarda lotes de até 20 pedidos e 20 retries e retorna apenas contadores. Uma falha individual não interrompe os demais; falhas retornam HTTP 503. O workflow `reconcile-payments.yml` no repositório GitHub usa o mesmo segredo via Actions, cron a cada cinco minutos e execução manual. GitHub pode atrasar ou descartar agendamentos e desativa schedules em repositórios públicos após 60 dias sem atividade; o cron não substitui o postback. Configure o segredo nos dois serviços antes de habilitar e valide com `workflow_dispatch`.
+
+Variáveis: `PAYMENT_API_TOKEN`, `PAYMENT_RECONCILE_TOKEN`, `UTMIFY_API_TOKEN`, `META_ACCESS_TOKEN`, `META_PIXEL_ID`, `META_API_VERSION` e `SHIPPING_AMOUNT_CENTS`. O modelo sem segredos está em `.env.example`. `UTMIFY_IS_TEST=true` é apenas para testes. Não alterar status de pedido para simular pagamento em produção.
 
 ## Verificação
 

@@ -147,16 +147,20 @@ async function deliverTracking(order, env) {
     const delivery = result[provider];
     await query(env.DB, 'UPDATE payment_tracking SET state = ?, code = ?, lease_until = 0, next_attempt_at = ? WHERE order_id = ? AND order_status = ? AND provider = ?', delivery.success ? 'sent' : delivery.retry ? 'retry' : 'failed', delivery.code || delivery.skipped || null, Date.now() + 60000, order.id, order.status, provider).run();
   }
+  return claimed.filter(provider => !result[provider].success && !result[provider].skipped).length;
 }
 function background(ctx, promise) { const task = promise.catch(() => {}); if (ctx?.waitUntil) ctx.waitUntil(task); return task; }
-async function refreshOrder(env, row) {
+async function refreshOrder(env, row, strict = false) {
   let order = fromRow(row);
   if (!order.providerHash || !env.PAYMENT_API_TOKEN || Date.now() - row.last_checked_at < 5000) return order;
   const claimed = await query(env.DB, 'UPDATE payment_orders SET last_checked_at = ? WHERE id = ? AND last_checked_at = ?', Date.now(), order.id, row.last_checked_at).run();
   if (!changes(claimed)) return fromRow(await byId(env.DB, order.id));
   try {
     const transaction = await gateway(env, 'GET', `/transactions/${encodeURIComponent(order.providerHash)}`);
-    if (transaction.hash !== order.providerHash || Number(transaction.amount) !== order.totalCents || transaction.payment_method !== 'pix') return order;
+    if (transaction.hash !== order.providerHash || Number(transaction.amount) !== order.totalCents || transaction.payment_method !== 'pix') {
+      if (strict) throw new PaymentError('gateway_verification_failed', 502);
+      return order;
+    }
     order = fromRow(await byId(env.DB, order.id));
     const code = transaction.pix?.pix_qr_code;
     if (!order.pix && typeof code === 'string' && code.length > 20 && code.length < 4096) order.pix = { code, expiresAt: new Date(new Date(order.createdAt).getTime() + 86400000).toISOString() };
@@ -168,7 +172,7 @@ async function refreshOrder(env, row) {
     else if (['canceled', 'cancelled', 'refused', 'failed'].includes(status) && order.status !== 'paid' && order.status !== 'refunded') order.status = 'refused';
     else if (status === 'pending' && !['paid', 'refunded', 'refused'].includes(order.status)) order.status = order.pix ? 'waiting_payment' : 'payment_uncertain';
     await saveOrder(env, order);
-  } catch { /* A polling failure never changes payment state or recreates a payment. */ }
+  } catch (error) { if (strict) throw error; /* Polling never recreates a payment. */ }
   return order;
 }
 async function checkout(request, env, ctx) {
@@ -229,15 +233,35 @@ async function checkout(request, env, ctx) {
   }
 }
 export async function retryPaymentTracking(env) {
-  if (!env.DB) return;
+  if (!env.DB) throw new PaymentError('maintenance_unavailable', 503);
   const pending = await query(env.DB, "SELECT DISTINCT o.* FROM payment_orders o JOIN payment_tracking t ON t.order_id = o.id AND t.order_status = o.status WHERE t.state IN ('pending', 'retry', 'sending') AND t.next_attempt_at <= ? AND t.lease_until <= ? AND t.attempts < 10 LIMIT 20", Date.now(), Date.now()).all();
-  for (const row of pending.results || []) await deliverTracking(fromRow(row), env);
+  const result = { processed: 0, failed: 0 };
+  for (const row of pending.results || []) {
+    try { if (await deliverTracking(fromRow(row), env)) result.failed++; }
+    catch { result.failed++; }
+    result.processed++;
+  }
+  return result;
 }
 export async function reconcilePayments(env) {
-  if (!env.DB || !env.PAYMENT_API_TOKEN) return;
-  const rows = await query(env.DB, "SELECT * FROM payment_orders WHERE provider_hash IS NOT NULL AND status IN ('waiting_payment', 'payment_uncertain') ORDER BY last_checked_at ASC LIMIT 20").all();
-  for (const row of rows.results || []) await deliverTracking(await refreshOrder(env, row), env);
-  await retryPaymentTracking(env);
+  if (!env.DB) throw new PaymentError('maintenance_unavailable', 503);
+  const result = { paymentsProcessed: 0, paymentsFailed: 0, trackingProcessed: 0, trackingFailed: 0, stageFailures: 0 };
+  if (env.PAYMENT_API_TOKEN) {
+    try {
+      const rows = await query(env.DB, "SELECT * FROM payment_orders WHERE provider_hash IS NOT NULL AND status IN ('waiting_payment', 'payment_uncertain') ORDER BY last_checked_at ASC LIMIT 20").all();
+      for (const row of rows.results || []) {
+        try { if (await deliverTracking(await refreshOrder(env, row, true), env)) result.trackingFailed++; }
+        catch { result.paymentsFailed++; }
+        result.paymentsProcessed++;
+      }
+    } catch { result.stageFailures++; }
+  } else result.stageFailures++;
+  try {
+    const tracking = await retryPaymentTracking(env);
+    result.trackingProcessed = tracking.processed;
+    result.trackingFailed += tracking.failed;
+  } catch { result.stageFailures++; }
+  return { ok: result.paymentsFailed + result.trackingFailed + result.stageFailures === 0, ...result };
 }
 export async function handlePaymentRequest(request, env, ctx) {
   const path = new URL(request.url).pathname;

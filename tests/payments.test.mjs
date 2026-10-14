@@ -2,7 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { DatabaseSync } from 'node:sqlite';
 import { readFileSync } from 'node:fs';
-import { handlePaymentRequest, retryPaymentTracking, validCPF } from '../worker/payments.mjs';
+import { handlePaymentRequest, reconcilePayments, retryPaymentTracking, validCPF } from '../worker/payments.mjs';
+import { handleMaintenanceRequest } from '../worker/maintenance.mjs';
 import { checkoutItems } from '../worker/catalog.mjs';
 
 const origin = 'https://shop.example';
@@ -358,4 +359,59 @@ test('provider amount mismatch never exposes an unverified Pix code', async () =
   const response = await f.request('/api/checkout', input());
   assert.equal(response.body.status, 'payment_uncertain');
   assert.equal(response.body.pix, null);
+});
+
+test('unattended maintenance confirms a payment without a browser', async () => {
+  const f = fixture();
+  const created = await f.request('/api/checkout', input());
+  f.state.status = 'paid'; f.tick();
+  f.env.PAYMENT_RECONCILE_TOKEN = 'maintenance-test-token';
+  const response = await handleMaintenanceRequest(new Request(origin + '/api/internal/reconcile', { method: 'POST', headers: { authorization: 'Bearer maintenance-test-token' } }), f.env);
+  assert.equal(response.status, 200);
+  assert.equal((await response.json()).paymentsProcessed, 1);
+  assert.equal(f.sqlite.prepare('SELECT status FROM payment_orders WHERE id = ?').get(created.body.id).status, 'paid');
+  assert.equal(f.state.posts.length, 1);
+});
+
+test('unattended maintenance confirms payment and isolates a corrupt order', async () => {
+  const f = fixture();
+  const created = await f.request('/api/checkout', input());
+  f.sqlite.exec("INSERT INTO payment_orders (id,idempotency_key,fingerprint,status,provider_hash,data_json,updated_at,last_checked_at) VALUES ('broken','broken','broken','waiting_payment','broken','invalid-json',0,-1)");
+  f.state.status = 'paid'; f.tick();
+  f.env.PAYMENT_RECONCILE_TOKEN = 'maintenance-test-token';
+  const response = await handleMaintenanceRequest(new Request(origin + '/api/internal/reconcile', { method: 'POST', headers: { authorization: 'Bearer maintenance-test-token' } }), f.env);
+  const result = await response.json();
+  assert.equal(response.status, 503);
+  assert.equal(result.ok, false);
+  assert.equal(result.paymentsProcessed, 2);
+  assert.equal(result.paymentsFailed, 1);
+  assert.equal(f.sqlite.prepare('SELECT status FROM payment_orders WHERE id = ?').get(created.body.id).status, 'paid');
+  assert.equal(f.state.posts.length, 1);
+  assert.ok(!JSON.stringify(result).includes(customer.email));
+});
+
+test('maintenance reports gateway failure without creating a new charge', async () => {
+  const f = fixture(); await f.request('/api/checkout', input()); f.tick();
+  f.env.PAYMENT_FETCH = async () => { throw new Error('sensitive-provider-error'); };
+  const result = await reconcilePayments(f.env);
+  assert.equal(result.ok, false);
+  assert.equal(result.paymentsFailed, 1);
+  assert.equal(f.state.posts.length, 1);
+  assert.ok(!JSON.stringify(result).includes('sensitive-provider-error'));
+});
+
+test('maintenance retries tracking even without gateway credentials', async () => {
+  const f = fixture(); f.state.status = 'paid'; f.state.metaFail = true;
+  const body = input(); body.tracking.consent = true;
+  await f.request('/api/checkout', body);
+  f.sqlite.exec('UPDATE payment_tracking SET next_attempt_at = 0');
+  f.state.metaFail = false;
+  delete f.env.PAYMENT_API_TOKEN;
+  const result = await reconcilePayments(f.env);
+  assert.equal(result.trackingProcessed, 1);
+  assert.equal(result.trackingFailed, 0);
+  assert.equal(result.stageFailures, 1);
+  assert.equal(result.ok, false);
+  assert.equal(f.state.tracking.filter(t => t.url.includes('facebook')).length, 2);
+  assert.equal(f.state.posts.length, 1);
 });

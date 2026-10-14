@@ -1,6 +1,7 @@
 import handler from 'vinext/server/fetch-handler';
 import { handlePaymentRequest, reconcilePayments, SHIPPING_OPTIONS } from './payments.mjs';
 import { handleTrackingRequest } from './tracking.mjs';
+import { handleMaintenanceRequest } from './maintenance.mjs';
 
 export default {
   async scheduled(_event, env, ctx) {
@@ -8,6 +9,8 @@ export default {
   },
   async fetch(request, env, ctx) {
     const pathname = new URL(request.url).pathname;
+    const maintenance = await handleMaintenanceRequest(request, env);
+    if (maintenance) return maintenance;
     const payment = await handlePaymentRequest(request, env, ctx);
     if (payment) return payment;
     if (pathname === '/api/events') return handleTrackingRequest(request, env);

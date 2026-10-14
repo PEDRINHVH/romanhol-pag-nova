@@ -3,16 +3,26 @@ const CONSENT_KEY = 'nolimit:marketing-consent:v1';
 const PARAMS = ['src', 'sck', 'utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term', 'fbclid'];
 const EVENTS = new Set(['PageView', 'ViewContent', 'Search', 'AddToWishlist', 'AddToCart', 'InitiateCheckout', 'AddPaymentInfo']);
 export function captureAttribution(url, previous = null) {
-  if (previous) return previous;
+  if (PARAMS.some(key => typeof previous?.[key] === 'string' && previous[key].trim())) return previous;
   const parsed = new URL(url);
-  return { ...Object.fromEntries(PARAMS.map(key => [key, parsed.searchParams.get(key)?.slice(0, 256) || null])), landedAt: Date.now(), landingPage: parsed.origin + parsed.pathname };
+  const hashQuery = parsed.hash.indexOf('?');
+  const hashParams = new URLSearchParams(hashQuery < 0 ? '' : parsed.hash.slice(hashQuery + 1));
+  const params = Object.fromEntries(PARAMS.map(key => [key, (parsed.searchParams.get(key) ?? hashParams.get(key))?.trim().slice(0, 256) || null]));
+  if (previous && !PARAMS.some(key => params[key])) return previous;
+  return { ...params, landedAt: Date.now(), landingPage: parsed.origin + parsed.pathname };
 }
 export function createTracker({ pixelId = '1146535704713953', endpoint = '/api/events', window: win = globalThis.window } = {}) {
   const read = (store, key) => { try { return JSON.parse(store.getItem(key)); } catch { return null; } };
   const write = (store, key, value) => { try { store.setItem(key, JSON.stringify(value)); } catch {} };
   let consent = read(win.localStorage, CONSENT_KEY) === true;
-  const attribution = captureAttribution(win.location.href, read(win.sessionStorage, KEY));
+  let attribution = captureAttribution(win.location.href, read(win.sessionStorage, KEY));
   write(win.sessionStorage, KEY, attribution);
+  const refreshAttribution = () => {
+    const next = captureAttribution(win.location.href, attribution);
+    if (next !== attribution) { attribution = next; write(win.sessionStorage, KEY, attribution); }
+  };
+  win.addEventListener?.('hashchange', refreshAttribution);
+  win.addEventListener?.('popstate', refreshAttribution);
   let loaded = false;
   let lastPage = '';
   const cookie = key => win.document.cookie.split('; ').find(part => part.startsWith(`${key}=`))?.slice(key.length + 1) || '';
@@ -28,7 +38,10 @@ export function createTracker({ pixelId = '1146535704713953', endpoint = '/api/e
     win.fbq('set', 'autoConfig', false, pixelId);
     win.fbq('init', pixelId); // No browser-side advanced matching / personal data.
   };
-  const getContext = () => ({ consent, attribution: { ...attribution }, eventSourceUrl: win.location.origin + win.location.pathname + (win.location.hash || '').split('?')[0], ...(consent ? { fbp: cookie('_fbp'), fbc: cookie('_fbc') || (attribution.fbclid ? `fb.1.${attribution.landedAt}.${attribution.fbclid}` : '') } : {}) });
+  const getContext = () => {
+    refreshAttribution();
+    return { consent, attribution: { ...attribution }, eventSourceUrl: win.location.origin + win.location.pathname + (win.location.hash || '').split('?')[0], ...(consent ? { fbp: cookie('_fbp'), fbc: cookie('_fbc') || (attribution.fbclid ? `fb.1.${attribution.landedAt}.${attribution.fbclid}` : '') } : {}) };
+  };
   const emit = (eventName, data = {}, purchase = false) => {
     if (!consent || (!EVENTS.has(eventName) && !(purchase && eventName === 'Purchase'))) return null;
     load();
