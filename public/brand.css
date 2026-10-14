@@ -113,7 +113,7 @@ a, button, input, select, textarea, summary { scroll-margin-block: 24px; }
 .size-button { min-height: 48px; border-radius: var(--radius-pill); }
 .size-button:hover { border-color: var(--blue); }
 .size-button.selected { background: var(--blue); border-color: var(--blue); color: var(--white); }
-.pdp-wishlist { min-height: 48px; border: 1px solid var(--line); border-radius: var(--radius-pill); padding: 12px 24px; }
+.pdp-wishlist { margin-top: 12px; min-height: 48px; border: 1px solid var(--line); border-radius: var(--radius-pill); padding: 12px 24px; }
 .pdp-wishlist:hover { background: var(--light); }
 .cart-image { border-radius: var(--radius-field); }
 .cart-summary { border: 1px solid var(--line); border-radius: var(--radius-card); padding: 28px; }
