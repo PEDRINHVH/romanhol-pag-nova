@@ -18,6 +18,8 @@ const readGift = () => {try {return sessionStorage.getItem(giftKey)==='true';} c
 let giftWrap=attempt?.orderRequest?.giftWrap ?? attempt?.giftWrap ?? readGift();
 let shippingMethod=attempt?.orderRequest?.shippingMethod ?? attempt?.shippingMethod ?? getShippingMethod();
 let appliedShippingZip='';
+let checkoutStep=attempt?.orderRequest||attempt?.orderId?4:1;
+const stepLabels=['Seus dados','Endereço','Frete','Pagamento'];
 const cartLocked = () => busy || !!order || !!attempt?.orderRequest || !!attempt?.orderId;
 const delivery = () => SHIPPING_OPTIONS.find(option=>option.id===shippingMethod) || SHIPPING_OPTIONS[0];
 const signature = cart => {
@@ -62,13 +64,46 @@ export function checkoutPage({cart,products,media,addons}) {
   const total=order?.totalCents ?? subtotal+shippingCents;
   const locked=cartLocked();
   const itemCount=lines.reduce((count,line)=>count+line.qty,0);
-  const summary=`<aside class="checkout-summary"><div class="checkout-section-title"><h2>Sua sacola</h2><a href="#/catalogo">Continuar comprando</a></div><details class="checkout-items" open><summary>${itemCount} ${itemCount===1?'item':'itens'} no pedido<span>Ver itens</span></summary>${renderCheckoutItems(lines,{media,locked})}</details>${deliveryChoices(locked)}${renderCheckoutGift({giftWrap:order?.giftWrap??giftWrap,locked})}${locked?'<p class="checkout-cart-locked" role="status">Sua seleção está confirmada para este pedido.</p>':''}<dl class="checkout-totals"><div><dt>Produtos</dt><dd>${money(subtotal/100)}</dd></div><div><dt>Frete · ${e(order?.shippingLabel || delivery().label)}</dt><dd class="${shippingCents?'':'free-shipping'}">${shippingCents?money(shippingCents/100):'Grátis'}</dd></div>${(order?.giftWrap??giftWrap)?'<div><dt>Embalagem para presente</dt><dd class="free-shipping">Grátis</dd></div>':''}<div class="checkout-total"><dt>Total no Pix</dt><dd aria-live="polite">${money(total/100)}</dd></div></dl><div class="pix-only-note"><span>Oferta de aniversário exclusiva no Pix.</span></div><p class="checkout-protection">Pagamento processado pelo Pagar.me.</p></aside>`;
+  const summary=`<aside class="checkout-summary"><div class="checkout-section-title"><h2>Sua sacola</h2><a href="#/catalogo">Continuar comprando</a></div><details class="checkout-items" open><summary>${itemCount} ${itemCount===1?'item':'itens'} no pedido<span>Ver itens</span></summary>${renderCheckoutItems(lines,{media,locked})}</details>${renderCheckoutGift({giftWrap:order?.giftWrap??giftWrap,locked})}${locked?'<p class="checkout-cart-locked" role="status">Sua seleção está confirmada para este pedido.</p>':''}<dl class="checkout-totals"><div><dt>Produtos</dt><dd>${money(subtotal/100)}</dd></div>${checkoutStep>=3||locked?`<div><dt>Frete · ${e(order?.shippingLabel || delivery().label)}</dt><dd class="${shippingCents?'':'free-shipping'}">${shippingCents?money(shippingCents/100):'Grátis'}</dd></div>`:""}${(order?.giftWrap??giftWrap)?'<div><dt>Embalagem para presente</dt><dd class="free-shipping">Grátis</dd></div>':''}<div class="checkout-total"><dt>${checkoutStep>=3||locked?'Total no Pix':'Subtotal'}</dt><dd aria-live="polite">${money((checkoutStep>=3||locked?total:subtotal)/100)}</dd></div></dl><div class="pix-only-note"><span>Oferta de aniversário exclusiva no Pix.</span></div><p class="checkout-protection">Pagamento processado pelo Pagar.me.</p></aside>`;
   let main;
   if(order){
     const [title,description]=statusCopy[order.status] || statusCopy.processing;
     main=`<section class="checkout-panel pix-result" aria-live="polite"><span class="pix-result-mark">${order.status==='paid'?'✓':pixLogo}</span><span class="eyebrow">${order.status==='paid'?'PAGAMENTO CONFIRMADO':'PAGAMENTO VIA PIX'}</span><h2>${title}</h2><p>${description}</p><strong class="pix-amount">${money(order.totalCents/100)}</strong>${order.status==='waiting_payment'&&order.pix?.code?`<div class="pix-qr">${qrImage?`<img src="${e(qrImage)}" alt="QR Code Pix deste pedido" width="224" height="224">`:'<span>Preparando QR Code…</span>'}</div><button type="button" class="button button-dark pix-copy" data-copy-pix>Copiar código Pix</button><details class="pix-code-details"><summary>Ver código copia e cola</summary><textarea aria-label="Código Pix" readonly>${e(order.pix.code)}</textarea></details>${order.pix.expiresAt?`<p class="pix-expiry">Válido até ${e(new Date(order.pix.expiresAt).toLocaleString('pt-BR'))}.</p>`:''}<p class="pix-waiting"><span></span>Aguardando a confirmação do banco</p>`:''}<p class="order-reference">Pedido <strong>${e(order.id)}</strong></p><p class="checkout-error" role="status">${e(message)}</p>${order.status==='refused'?'<button type="button" class="button button-dark" data-retry-checkout>Revisar dados e tentar novamente</button>':['waiting_payment','processing','payment_uncertain'].includes(order.status)?'<button type="button" class="text-link" data-refresh-payment>Já paguei · verificar pagamento</button>':''}<a class="text-link pix-back" href="#/catalogo">Voltar à loja</a></section>`;
   }else{
-    main=`<form id="pix-checkout" class="checkout-panel" novalidate>${attempt?.orderRequest?'<p class="checkout-recovery" role="status">Sua solicitação já foi enviada. Recuperaremos o mesmo Pix, sem criar outro pedido.</p>':''}<fieldset class="checkout-fields-group" ${busy||attempt?.orderRequest?'disabled':''}><div class="checkout-section-title"><span class="step-number">1</span><h2>Seus dados</h2></div><p class="checkout-section-note">Dados para pagamento e entrega. Não é preciso criar uma conta. Todos os campos são obrigatórios, exceto o complemento.</p><div class="checkout-fields">${field('name','Nome completo','autocomplete="name" required minlength="5" maxlength="120"',true)}${field('email','E-mail','type="email" autocomplete="email" required maxlength="180"',true)}${field('document','CPF','inputmode="numeric" autocomplete="off" placeholder="000.000.000-00" required maxlength="14"')}${field('phone','Celular com DDD','type="tel" autocomplete="tel-national" placeholder="(11) 99999-9999" required maxlength="17"')}</div><div class="checkout-section-title delivery-title"><span class="step-number">2</span><h2>Endereço de entrega</h2><span class="${shippingCents?'':'free-shipping'}">${e(delivery().label)} · ${shippingCents?money(shippingCents/100):'Grátis'}</span></div><div class="checkout-fields">${field('zipCode','CEP','inputmode="numeric" autocomplete="postal-code" placeholder="00000-000" required maxlength="9"')}${field('state','Estado (UF)','autocomplete="address-level1" placeholder="SP" required minlength="2" maxlength="2"')}<div class="cep-feedback field-wide"><p id="cep-status" data-cep-status role="status" aria-live="polite">Informe o CEP para preencher o endereço automaticamente.</p><button type="button" class="text-link" data-cep-retry hidden>Tentar buscar CEP novamente</button></div>${field('street','Rua ou avenida','autocomplete="address-line1" required maxlength="160"',true)}${field('number','Número','autocomplete="off" required maxlength="20"')}${field('complement','Complemento (opcional)','autocomplete="address-line2" maxlength="80"')}${field('neighborhood','Bairro','autocomplete="address-level3" required maxlength="80"')}${field('city','Cidade','autocomplete="address-level2" required maxlength="80"')}</div><div class="checkout-method">${pixLogo}<div><strong>Pix à vista</strong><span>Oferta de aniversário exclusiva no Pix</span></div><span class="method-selected" aria-hidden="true">✓</span></div></fieldset><p class="checkout-config-error" data-config-error role="status">${configFailed?'Não foi possível carregar o pagamento. Sua sacola está salva.':''}</p><button type="button" class="text-link config-retry" data-retry-config ${configFailed?'':'hidden'}>Tentar carregar pagamento novamente</button><p class="checkout-error" role="alert">${e(message)}</p><button class="button button-dark checkout-submit" type="submit" data-total-cents="${total}" aria-busy="${busy}" ${busy||!config.paymentReady?'disabled':''}>${submitLabel(total)}</button><p class="checkout-privacy">Ao continuar, seus dados serão usados para processar e entregar seu pedido. <a href="#/privacidade">Saiba mais</a>.</p></form>`;
+    main=`<form id="pix-checkout" class="checkout-panel" novalidate>
+      <ol class="checkout-progress" aria-label="Etapas da compra">${stepLabels.map((label,index)=>`<li class="${checkoutStep===index+1?'is-current':checkoutStep>index+1?'is-complete':''}" ${checkoutStep===index+1?'aria-current="step"':''}><span aria-hidden="true">${index+1}</span>${label}</li>`).join('')}</ol>
+      ${attempt?.orderRequest?'<p class="checkout-recovery" role="status">Sua solicitação já foi enviada. Recuperaremos o mesmo Pix, sem criar outro pedido.</p>':''}
+      <fieldset class="checkout-fields-group" ${busy||attempt?.orderRequest?'disabled':''}>
+        <section data-checkout-step="1" ${checkoutStep===1?'':'hidden'} aria-labelledby="checkout-step-1">
+          <div class="checkout-section-title"><h2 id="checkout-step-1" tabindex="-1">Seus dados</h2></div>
+          <p class="checkout-section-note">Dados para pagamento e entrega. Não é preciso criar uma conta.</p>
+          <div class="checkout-fields">${field('name','Nome completo','autocomplete="name" required minlength="5" maxlength="120"',true)}${field('email','E-mail','type="email" autocomplete="email" required maxlength="180"',true)}${field('document','CPF','inputmode="numeric" autocomplete="off" placeholder="000.000.000-00" required maxlength="14"')}${field('phone','Celular com DDD','type="tel" autocomplete="tel-national" placeholder="(11) 99999-9999" required maxlength="17"')}</div>
+        </section>
+        <section data-checkout-step="2" ${checkoutStep===2?'':'hidden'} aria-labelledby="checkout-step-2">
+          <div class="checkout-section-title"><h2 id="checkout-step-2" tabindex="-1">Endereço de entrega</h2></div>
+          <p class="checkout-section-note">Informe o CEP e complete o endereço para escolher o frete. O complemento é opcional.</p>
+          <div class="checkout-fields">${field('zipCode','CEP','inputmode="numeric" autocomplete="postal-code" placeholder="00000-000" required maxlength="9"')}${field('state','Estado (UF)','autocomplete="address-level1" placeholder="SP" required minlength="2" maxlength="2"')}<div class="cep-feedback field-wide"><p id="cep-status" data-cep-status role="status" aria-live="polite">Informe o CEP para preencher o endereço automaticamente.</p><button type="button" class="text-link" data-cep-retry hidden>Tentar buscar CEP novamente</button></div>${field('street','Rua ou avenida','autocomplete="address-line1" required maxlength="160"',true)}${field('number','Número','autocomplete="off" required maxlength="20"')}${field('complement','Complemento (opcional)','autocomplete="address-line2" maxlength="80"')}${field('neighborhood','Bairro','autocomplete="address-level3" required maxlength="80"')}${field('city','Cidade','autocomplete="address-level2" required maxlength="80"')}</div>
+        </section>
+        <section data-checkout-step="3" ${checkoutStep===3?'':'hidden'} aria-labelledby="checkout-step-3">
+          <div class="checkout-section-title"><h2 id="checkout-step-3" tabindex="-1">Escolha o frete</h2></div>
+          <p class="checkout-section-note">Confira o endereço e escolha como receber seu pedido.</p>
+          <p class="checkout-address-review">${e(draft.street||'')}, ${e(draft.number||'')}${draft.complement?` · ${e(draft.complement)}`:''}<br>${e(draft.neighborhood||'')} · ${e(draft.city||'')} / ${e(draft.state||'')}<br>CEP ${e(draft.zipCode||'')}</p>
+          ${deliveryChoices(locked)}
+        </section>
+        <section data-checkout-step="4" ${checkoutStep===4?'':'hidden'} aria-labelledby="checkout-step-4">
+          <div class="checkout-section-title"><h2 id="checkout-step-4" tabindex="-1">Pagamento</h2></div>
+          <p class="checkout-section-note">${e(delivery().label)} · ${shippingCents?money(shippingCents/100):'Grátis'} · ${e(delivery().days)}</p>
+          <div class="checkout-method">${pixLogo}<div><strong>Pix à vista</strong><span>Oferta de aniversário exclusiva no Pix</span></div><span class="method-selected" aria-hidden="true">✓</span></div>
+        </section>
+      </fieldset>
+      <div ${checkoutStep===4?'':'hidden'}><p class="checkout-config-error" data-config-error role="status">${configFailed?'Não foi possível carregar o pagamento. Sua sacola está salva.':''}</p><button type="button" class="text-link config-retry" data-retry-config ${configFailed?'':'hidden'}>Tentar carregar pagamento novamente</button></div>
+      <p class="checkout-error" role="alert">${e(message)}</p>
+      <div class="checkout-step-actions">
+        ${checkoutStep>1&&!locked?'<button type="button" class="text-link checkout-back" data-checkout-back>← Voltar</button>':''}
+        ${checkoutStep<4?`<button class="button button-dark checkout-next" type="submit">${['','Continuar para endereço','Continuar para frete','Continuar para pagamento'][checkoutStep]}</button>`:`<button class="button button-dark checkout-submit" type="submit" data-total-cents="${total}" aria-busy="${busy}" ${busy||!config.paymentReady?'disabled':''}>${submitLabel(total)}</button>`}
+      </div>
+      <p class="checkout-privacy">Seus dados serão usados para processar e entregar seu pedido. <a href="#/privacidade">Saiba mais</a>.</p>
+    </form>`;
   }
   return `<div class="wrap checkout-page"><div class="checkout-breadcrumb"><a href="#/sacola">← Sacola</a><span>Pagamento via Pagar.me</span></div><div class="checkout-heading"><h1>Finalizar compra</h1><p>Pix à vista · <strong>Frete grátis para todo o Brasil.</strong></p></div><div class="checkout-layout"><div>${main}${!cartLocked()?addons(lines.map(line=>line.product)):''}</div>${summary}</div></div>`;
 }
@@ -99,6 +134,15 @@ async function loadConfig() {
   try {config=await api('/api/config');configured=true;configFailed=!config.paymentReady;}
   catch {configured=false;configFailed=true;}
   finally {configLoading=false;updatePaymentControls();}
+}
+function setCheckoutStep(step) {
+  snapshotCheckoutForm();
+  checkoutStep=step;message='';refresh();
+  document.querySelector(`[data-checkout-step="${step}"] h2`)?.focus();
+}
+function validateStep(form, step) {
+  const section=form.querySelector(`[data-checkout-step="${step}"]`);
+  return section ? validateCheckoutForm(section) : false;
 }
 async function prepareQr() {
   if(!order?.pix?.code || qrCode===order.pix.code)return;
@@ -159,14 +203,28 @@ document.addEventListener('change',event=>{
   document.querySelector(target.matches('[data-checkout-gift]')?'[data-checkout-gift]':'[data-checkout-shipping]:checked')?.focus({preventScroll:true});
 });
 document.addEventListener('click',event=>{
+  if(event.target.closest('[data-checkout-back]')&&!cartLocked()&&checkoutStep>1){setCheckoutStep(checkoutStep-1);return;}
   const target=event.target.closest('button[data-checkout-action]');
   if(target)updateCart({type:target.dataset.checkoutAction,id:target.dataset.productId,size:target.dataset.size});
 });
 document.addEventListener('input',event=>{if(event.target.closest('#pix-checkout'))draft[event.target.name]=event.target.value;});
 document.addEventListener('submit',async event=>{
   if(event.target.id!=='pix-checkout')return;
-  event.preventDefault();if(busy||!config.paymentReady)return;
-  if(!attempt?.orderRequest&&!validateCheckoutForm(event.target))return;
+  event.preventDefault();if(busy)return;
+  if(!attempt?.orderRequest){
+    if(checkoutStep<4){
+      if(validateStep(event.target,checkoutStep))setCheckoutStep(checkoutStep+1);
+      return;
+    }
+    for(const step of [1,2]){
+      if(!validateStep(event.target,step)){
+        setCheckoutStep(step);
+        validateStep(document.querySelector('#pix-checkout'),step);
+        return;
+      }
+    }
+  }
+  if(!config.paymentReady)return;
   snapshotCheckoutForm();
   const cart=hooks.getCart(),products=hooks.getProducts(),sig=signature(cart);
   if(!attempt||attempt.signature!==sig)attempt={idempotencyKey:crypto.randomUUID(),signature:sig,giftWrap,shippingMethod};
@@ -193,7 +251,7 @@ document.addEventListener('submit',async event=>{
 });
 document.addEventListener('click',async event=>{
   if(event.target.closest('[data-retry-config]'))await loadConfig();
-  if(event.target.closest('[data-retry-checkout]')&&order?.status==='refused'){attempt=null;order=null;message='';persist();refresh();}
+  if(event.target.closest('[data-retry-checkout]')&&order?.status==='refused'){attempt=null;order=null;checkoutStep=1;message='';persist();refresh();}
   if(event.target.closest('[data-refresh-payment]')){message='Verificando pagamento…';refresh();await checkOrder();}
   if(event.target.closest('[data-copy-pix]')&&order?.pix?.code){try{await navigator.clipboard.writeText(order.pix.code);hooks.toast('Código Pix copiado. Cole no aplicativo do seu banco.');}catch{document.querySelector('.pix-code-details')?.setAttribute('open','');document.querySelector('.pix-code-details textarea')?.select();hooks.toast('Selecione e copie o código Pix exibido.');}}
 });

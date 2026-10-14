@@ -2,7 +2,7 @@ import {money,escapeHTML as e,normalize,brandText,isForce,priceOf,values,facetVa
 // Version visor dependencies together; browsers cache each module independently.
 import {visorBump} from './visor-ui.js?v=20261014-norisk-products';
 import {visorOffers} from './visor-utils.js?v=20261014-norisk-products';
-import {checkoutPage,configureCheckout,mountCheckout,snapshotCheckoutForm} from './checkout.js?v=20261014-cart-shipping';
+import {checkoutPage,configureCheckout,mountCheckout,snapshotCheckoutForm} from './checkout.js?v=20261014-checkout-steps';
 import {renderProductShipping,mountProductShipping} from './product-shipping.js?v=20261014-cart-shipping';
 import {createTracker} from './tracking.js';
 import {renderSizeGuide,mountSizeGuide} from './size-guide.js';

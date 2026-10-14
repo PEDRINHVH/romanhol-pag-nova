@@ -209,3 +209,17 @@
 .checkout-delivery:disabled label { cursor: default; }
 .checkout-delivery input:focus-visible { outline: 2px solid var(--blue, #265cff); outline-offset: 4px; }
 .checkout-cart-locked { color: var(--muted, #526170); font-size: 12px; line-height: 1.5; margin: 14px 0 0; }
+
+/* One visible checkout stage, with a compact progress indicator on mobile. */
+.checkout-panel [hidden] { display: none !important; }
+.checkout-progress { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; list-style: none; padding: 0; margin: 0 0 30px; }
+.checkout-progress li { display: grid; justify-items: center; gap: 8px; min-width: 0; color: var(--muted, #526170); font-size: 11px; text-align: center; }
+.checkout-progress li > span { display: grid; place-items: center; width: 30px; height: 30px; border: 1px solid var(--line, #e3e8ef); border-radius: 50%; background: #fff; font-weight: 600; }
+.checkout-progress .is-current { color: var(--blue, #265cff); font-weight: 600; }
+.checkout-progress .is-current > span { color: #fff; background: var(--blue, #265cff); border-color: var(--blue, #265cff); }
+.checkout-progress .is-complete > span { color: var(--blue, #265cff); background: #edf2ff; border-color: #c8d5ff; }
+.checkout-step-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; margin-top: 12px; }
+.checkout-step-actions .button { flex: 1 1 200px; justify-content: center; min-height: 54px; }
+.checkout-step-actions .checkout-back { min-height: 48px; padding: 8px 4px; flex: 0 0 auto; }
+.checkout-address-review { padding: 16px; border-radius: var(--radius-field, 16px); background: var(--light, #f4f7fb); color: var(--muted, #526170); font-size: 13px; line-height: 1.7; overflow-wrap: anywhere; }
+.checkout-fields-group h2:focus { outline: none; }

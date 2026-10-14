@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import vm from 'node:vm';
+import {validateCheckoutForm as validateFields, validationError} from '../public/checkout-validation.js';
 import {escapeHTML, money, priceOf} from '../public/catalog-utils.js';
 import {renderCheckoutItems, renderCheckoutGift, changeCheckoutCart} from '../public/checkout-cart.js';
 
@@ -15,16 +16,31 @@ const payment = (status='waiting_payment') => ({id:'11111111-1111-4111-8111-1111
 const response = (body, status=200) => ({ok:status < 400, status, json:async()=>structuredClone(body)});
 const deferred = () => {let resolve; const promise=new Promise(done=>{resolve=done;}); return {promise,resolve};};
 
-function fixture({store=new Map(), fetch=async()=>response({paymentReady:true,shippingCents:0}), importQr=async()=>({default:{toDataURL:async()=> 'data:image/png;base64,qr'}})}={}) {
+function fixture({store=new Map(), realValidation=false, fetch=async()=>response({paymentReady:true,shippingCents:0}), importQr=async()=>({default:{toDataURL:async()=> 'data:image/png;base64,qr'}})}={}) {
   const events=new Map(), timers=new Map(); let timerId=0, uuid=0, renders=0, html='', formVisible=true;
   let fields={...customerFields},fieldsetDisabled=false;
   const cart=[{id:'item',size:'M',qty:1}];
   const products=[{id:'item',name:'Produto',model:'Produto',category:'acessorios',price:100,variants:[{size:'M'},{size:'G'}]}];
-  const form={id:'pix-checkout',querySelector:selector=>selector==='fieldset:disabled'&&fieldsetDisabled?{}:null};
+  const focused=[];
+  const personal=new Set(['name','email','document','phone']);
+  function query(selector,step) {
+    const section=selector.match(/data-checkout-step="([1-4])"/);
+    if(section)return {querySelector:selector=>query(selector,Number(section[1]))};
+    const named=selector.match(/^\[name="([^"]+)"\]$/);
+    if(named&&(!step||(step===1?personal.has(named[1]):step===2&&!personal.has(named[1])))) {
+      const name=named[1];
+      return {name,get value(){return fields[name]||'';},setAttribute(){},removeAttribute(){},focus(){focused.push(name);}};
+    }
+    if(selector==='fieldset:disabled')return fieldsetDisabled?{}:null;
+    if(selector.includes('h2'))return {focus(){focused.push('heading');}};
+    return null;
+  }
+  const form={id:'pix-checkout',querySelector:query};
   const controls={'.checkout-submit':{dataset:{totalCents:'10000'}},'[data-config-error]':{},'[data-retry-config]':{hidden:true}};
   const sandbox={
     e:escapeHTML,money,priceOf,renderCheckoutItems,renderCheckoutGift,changeCheckoutCart,console,URL,AbortController,__importQr:importQr,
-    mountAddressAutofill:()=>()=>{},mountCheckoutValidation:()=>()=>{},validateCheckoutForm:()=>true,
+    mountAddressAutofill:()=>()=>{},mountCheckoutValidation:()=>()=>{},validationError,
+    validateCheckoutForm:realValidation?validateFields:()=>true,
     location:{hash:'#/checkout'}, navigator:{clipboard:{writeText:async()=>{}}},
     crypto:{randomUUID:()=>`test-key-${++uuid}-1234567890`},
     sessionStorage:{getItem:key=>store.get(key)||null,setItem:(key,value)=>store.set(key,value),removeItem:key=>store.delete(key)},
@@ -50,14 +66,15 @@ function fixture({store=new Map(), fetch=async()=>response({paymentReady:true,sh
   }
   evaluate('configureCheckout')({getCart:()=>cart,setCart:next=>cart.splice(0,cart.length,...next),getProducts:()=>products,render:()=>{renders++;page();},toast:()=>{},tracker:{track:()=>{},purchase:()=>{},getContext:()=>({consent:false})}});
   page();
-  return {cart,store,page,evaluate,controls,
+  const advance=async()=>{for(const handler of events.get('submit')||[])await handler({target:form,preventDefault(){}});};
+  return {cart,store,page,evaluate,controls,focused,advance,
     get renders(){return renders;},get html(){return html;},
     setFields:next=>{fields={...next};},
-    state:()=>JSON.parse(evaluate('JSON.stringify({attempt,order,draft,busy,message,giftWrap,shippingMethod})')),
+    state:()=>JSON.parse(evaluate('JSON.stringify({attempt,order,draft,busy,message,giftWrap,shippingMethod,checkoutStep})')),
     ready:()=>evaluate('configured=true;config={paymentReady:true,shippingCents:0}'),
     mount:()=>evaluate('mountCheckout()'),
     poll:()=>evaluate('checkOrder()'),
-    submit:async()=>{for(const handler of events.get('submit')||[])await handler({target:form,preventDefault(){}});},
+    submit:async()=>{evaluate('checkoutStep=4');await advance();},
     click:async (selector,dataset={})=>{for(const handler of events.get('click')||[])await handler({target:{closest:value=>value===selector?{dataset}:null}});},
     change:async (selector,properties={})=>{for(const handler of events.get('change')||[])await handler({target:{matches:value=>value.split(',').includes(selector),...properties}});}
   };
@@ -181,11 +198,13 @@ test('gift and Sedex persist on reload, preserve fields and enter payment payloa
   await f.change('[data-checkout-shipping]',{value:'sedex'});
   assert.deepEqual(f.state().draft,customerFields);
   assert.equal(f.state().giftWrap,true);assert.equal(f.state().shippingMethod,'sedex');
+  await f.advance();await f.advance();await f.advance();
   assert.match(f.html,/data-total-cents="15781"/);
   assert.match(f.html,/Embalagem para presente<\/dt><dd class="free-shipping">Grátis/);
   const reopened=fixture({store,fetch:async(path,options)=>{requests.push(JSON.parse(options.body));return response({...payment(),shippingCents:5781,totalCents:15781,giftWrap:true,shippingMethod:'sedex'});}});
   reopened.ready();reopened.setFields(customerFields);
   assert.equal(reopened.state().giftWrap,true);assert.equal(reopened.state().shippingMethod,'sedex');
+  await reopened.advance();await reopened.advance();await reopened.advance();
   assert.match(reopened.html,/data-total-cents="15781"/);
   await reopened.submit();
   assert.equal(requests[0].giftWrap,true);assert.equal(requests[0].shippingMethod,'sedex');
@@ -209,7 +228,8 @@ for(const lock of ['busy','orderRequest','orderId','order'])test(`cart and optio
   else if(lock==='order')f.evaluate(`order=${JSON.stringify(payment())}`);
   else f.evaluate(`attempt=${JSON.stringify({...frozen,[lock]:lock==='orderId'?'existing-order':{giftWrap:false,shippingMethod:'standard'}})}`);
   f.page();
-  assert.match(f.html,/<fieldset class="checkout-delivery" disabled/);
+  if(lock==='order')assert.doesNotMatch(f.html,/data-checkout-shipping/);
+  else assert.match(f.html,/<fieldset class="checkout-delivery" disabled/);
   assert.match(f.html,/data-checkout-gift disabled/);
   const before=JSON.stringify(f.cart);
   await f.click('button[data-checkout-action]',{checkoutAction:'remove',productId:'item',size:'M'});
@@ -218,4 +238,70 @@ for(const lock of ['busy','orderRequest','orderId','order'])test(`cart and optio
   await f.change('[data-checkout-shipping]',{value:'sedex'});
   assert.equal(JSON.stringify(f.cart),before);
   assert.equal(f.state().giftWrap,false);assert.equal(f.state().shippingMethod,'standard');
+});
+
+test('four checkout steps validate their own fields and create Pix only after shipping', async()=>{
+  const requests=[];
+  const f=fixture({realValidation:true,fetch:async(path,options)=>{requests.push(JSON.parse(options.body));return response(payment());}});
+  f.ready();
+  assert.equal(f.state().checkoutStep,1);
+  f.setFields({...customerFields,name:'Maria',zipCode:''});
+  await f.advance();
+  assert.equal(f.state().checkoutStep,1);
+  assert.equal(f.focused.at(-1),'name');
+  f.setFields({...customerFields,zipCode:'123',street:''});
+  await f.advance();
+  assert.equal(f.state().checkoutStep,2);
+  await f.advance();
+  assert.equal(f.state().checkoutStep,2);
+  assert.equal(f.focused.at(-1),'zipCode');
+  assert.equal(requests.length,0);
+  f.setFields(customerFields);
+  await f.advance();
+  assert.equal(f.state().checkoutStep,3);
+  const summary=f.html.match(/<aside\b[^>]*>[\s\S]*?<\/aside>/)?.[0];
+  assert.ok(summary);
+  assert.doesNotMatch(summary,/data-checkout-shipping/);
+  assert.match(f.html,/<section[^>]*data-checkout-step="3"[^>]*>[\s\S]*?data-checkout-shipping/);
+  await f.change('[data-checkout-shipping]',{value:'sedex'});
+  await f.advance();
+  assert.equal(f.state().checkoutStep,4);
+  assert.equal(requests.length,0);
+  await f.click('[data-checkout-back]');
+  assert.equal(f.state().checkoutStep,3);
+  assert.equal(f.state().draft.street,customerFields.street);
+  assert.equal(f.state().shippingMethod,'sedex');
+  await f.advance();
+  await f.advance();
+  assert.equal(requests.length,1);
+  assert.equal(requests[0].shippingMethod,'sedex');
+  assert.equal(requests[0].customer.address.zipCode,customerFields.zipCode);
+});
+
+test('payment revalidates earlier sections and returns to the first invalid step',async()=>{
+  let requests=0;
+  const f=fixture({realValidation:true,fetch:async()=>{requests++;return response(payment());}});
+  f.ready();f.setFields(customerFields);
+  await f.advance();await f.advance();await f.advance();
+  f.setFields({...customerFields,document:'11111111111'});
+  await f.advance();
+  assert.equal(f.state().checkoutStep,1);
+  assert.equal(requests,0);
+  f.setFields({...customerFields,zipCode:'123'});
+  await f.advance();
+  f.evaluate('checkoutStep=4');
+  await f.advance();
+  assert.equal(f.state().checkoutStep,2);
+  assert.equal(requests,0);
+});
+
+test('reopened ambiguous payment resumes at payment and keeps the frozen request',async()=>{
+  const store=new Map(),requests=[];
+  const f=fixture({store,fetch:async(path,options)=>{requests.push(JSON.parse(options.body));throw new Error('offline');}});
+  f.ready();f.setFields(customerFields);await f.submit();
+  const reopened=fixture({store,realValidation:true,fetch:async(path,options)=>{requests.push(JSON.parse(options.body));return response(payment());}});
+  reopened.ready();
+  assert.equal(reopened.state().checkoutStep,4);
+  await reopened.advance();
+  assert.deepEqual(requests[1],requests[0]);
 });

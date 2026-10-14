@@ -32,7 +32,7 @@ Ao adicionar um produto ou uma viseira pela página do produto, a loja redirecio
 
 ## Integração de vendas
 
-Checkout em uma página, exclusivamente Pix, com frete grátis para todo o Brasil por decisão do proprietário. A oferta de aniversário é explicitamente condicionada ao Pix. A identificação visível do processador é Pagar.me.
+Checkout em quatro etapas: dados pessoais, endereço, frete e pagamento via Pix. A escolha de frete aparece após validar o CEP e o endereço; a entrega padrão é grátis e o Sedex é opcional. O resumo da sacola mostra apenas os valores, sem seletor de frete. A oferta de aniversário é explicitamente condicionada ao Pix. A identificação visível do processador é Pagar.me.
 
 `worker/payments.mjs` integra a API documentada em https://docs.ironpayapp.com.br, cadastra os produtos da loja sob demanda, recalcula os preços no servidor, valida CPF/endereço/variante/quantidade e persiste pedidos e chaves de idempotência. O Pix é apresentado como QR Code local e copia e cola. Repetir a mesma solicitação retorna o mesmo pedido. Uma resposta incerta do provedor nunca dispara automaticamente outra cobrança.
 
