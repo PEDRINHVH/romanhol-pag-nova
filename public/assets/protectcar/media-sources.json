@@ -2,6 +2,12 @@
   "sourcePage": "https://www.lojaprotectcar.com/",
   "retrievedAt": "2026-10-14",
   "processing": "Original H.264 MP4 files, without audio. Posters extracted at 3 seconds.",
+  "kitImages": [
+    {"file":"kit-carro-interno.webp","source":"https://www.lojaprotectcar.com/images/prod1.webp"},
+    {"file":"kit-carro-completo.webp","source":"https://www.lojaprotectcar.com/images/foto1.webp"},
+    {"file":"kit-picape-interno.webp","source":"https://www.lojaprotectcar.com/images/prod1.webp"},
+    {"file":"kit-picape-completo.jpeg","source":"https://www.lojaprotectcar.com/images/cacamba.jpeg"}
+  ],
   "videos": [
     {"file":"demo-encaixe.mp4","source":"https://www.lojaprotectcar.com/images/material-main.mp4","width":540,"height":720,"durationSeconds":38.58},
     {"file":"demo-cobertura.mp4","source":"https://www.lojaprotectcar.com/images/gifcobertuura.mp4","width":540,"height":720,"durationSeconds":39},

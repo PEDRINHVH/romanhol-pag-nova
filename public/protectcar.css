@@ -22,6 +22,7 @@
 .protectcar-choice input:focus-visible+span{outline:3px solid var(--blue,#265cff);outline-offset:3px}
 .protectcar-choice:hover>span{border-color:#a5b7dd}
 .protectcar-kits .protectcar-choice>span{align-items:flex-start;flex-direction:column;padding:12px 14px;gap:4px}
+.protectcar-kit-image{display:block;width:100%;height:clamp(76px,10vw,110px);object-fit:contain;background:#fff;border-radius:11px;margin-bottom:5px}
 .protectcar-kit-name{font-size:12px;font-weight:500;line-height:1.6}
 .protectcar-kits strong{font-family:Sora,Inter,sans-serif;font-size:20px;letter-spacing:-.5px}
 .protectcar-kits small{color:var(--muted,#647181);font-size:10px}

@@ -11,7 +11,7 @@ import {mountProductSticky} from './product-sticky.js?v=20261014-protectcar';
 import {createCheckoutDrawer} from './checkout-drawer.js?v=20261014-purchase-flow';
 import {PROTECTCAR_PRODUCT,PROTECTCAR_KITS,PROTECTCAR_COLORS,PROTECTCAR_TEXTURES} from './protectcar-data.js';
 import {isProtectCar,normalizeConfiguration,configurationKey,configurationLabel} from './protectcar-config.js';
-import {renderProtectCarConfigurator,mountProtectCarConfigurator,renderProtectCarDescription,mountProtectCarComparisons} from './protectcar-ui.js?v=20261014-media';
+import {renderProtectCarConfigurator,mountProtectCarConfigurator,renderProtectCarDescription,mountProtectCarComparisons} from './protectcar-ui.js?v=20261014-kit-images';
 const tracker=createTracker();
 let lastTrackedRoute='';
 const trackingItems=()=>cart.map(line=>({id:line.id,quantity:line.qty,unitPriceCents:Math.round(priceOf(products.find(p=>p.id===line.id),line.size)*100)}));
