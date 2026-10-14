@@ -3,6 +3,10 @@ import { sendOrderTracking, purchaseEventId } from './tracking.mjs';
 import { storefrontOrigin, storefrontClientIp } from './storefront-origin.mjs';
 
 const API = 'https://api.ironpayapp.com.br/api/public/v1';
+export const SHIPPING_OPTIONS = Object.freeze([
+  Object.freeze({ id: 'standard', label: 'Correios', amountCents: 0, deliveryEstimate: '4–8 dias úteis' }),
+  Object.freeze({ id: 'sedex', label: 'Sedex', amountCents: 5781, deliveryEstimate: '2–4 dias úteis' }),
+]);
 // Verified in the account on 2026-10-12; data initialization belongs outside migrations.
 const VERIFIED_PRODUCTS = { '394': { product_hash: 'xurol3z1la', offer_hash: 'kxgcb' } };
 const json = (value, status = 200) => Response.json(value, { status, headers: { 'cache-control': 'no-store', 'x-content-type-options': 'nosniff' } });
@@ -117,7 +121,8 @@ async function productMapping(env, item, origin) {
   }
 }
 export function publicOrder(order) {
-  return { id: order.id, status: order.status, retryAllowed: order.status === 'refused', totalCents: order.totalCents, subtotalCents: order.subtotalCents, shippingCents: order.shippingCents, items: order.items.map(({ id, name, size, quantity, unitPriceCents }) => ({ id, name, size, quantity, unitPriceCents })), pix: order.pix || null, createdAt: order.createdAt, paidAt: order.paidAt || null, ...(order.status === 'paid' ? { purchaseEventId: purchaseEventId(order.id) } : {}) };
+  const shipping = SHIPPING_OPTIONS.find(option => option.id === order.shippingMethod) || SHIPPING_OPTIONS[0];
+  return { id: order.id, status: order.status, retryAllowed: order.status === 'refused', totalCents: order.totalCents, subtotalCents: order.subtotalCents, shippingCents: order.shippingCents, giftWrap: order.giftWrap === true, shippingMethod: shipping.id, shippingLabel: order.shippingLabel || shipping.label, shippingDeliveryEstimate: order.shippingDeliveryEstimate || shipping.deliveryEstimate, items: order.items.map(({ id, name, size, quantity, unitPriceCents }) => ({ id, name, size, quantity, unitPriceCents })), pix: order.pix || null, createdAt: order.createdAt, paidAt: order.paidAt || null, ...(order.status === 'paid' ? { purchaseEventId: purchaseEventId(order.id) } : {}) };
 }
 async function saveOrder(env, order) {
   await query(env.DB, 'UPDATE payment_orders SET status = ?, provider_hash = ?, data_json = ?, updated_at = ? WHERE id = ?', order.status, order.providerHash || null, JSON.stringify(order), Date.now(), order.id).run();
@@ -169,24 +174,30 @@ async function refreshOrder(env, row) {
 async function checkout(request, env, ctx) {
   const origin = storefrontOrigin(request);
   if (!origin) throw new PaymentError('invalid_origin', 403);
-  if (!env.DB || !env.PAYMENT_API_TOKEN || !/^\d+$/.test(String(env.SHIPPING_AMOUNT_CENTS ?? ''))) throw new PaymentError('checkout_unavailable', 503);
+  if (!env.DB || !env.PAYMENT_API_TOKEN) throw new PaymentError('checkout_unavailable', 503);
   const input = await readBody(request);
   if (typeof input.idempotencyKey !== 'string' || !/^[\w-]{16,100}$/.test(input.idempotencyKey)) throw new PaymentError('invalid_idempotency_key');
   let items;
   try { items = checkoutItems(input.items); } catch { throw new PaymentError('invalid_items'); }
+  if (input.giftWrap !== undefined && typeof input.giftWrap !== 'boolean') throw new PaymentError('invalid_gift_wrap');
+  const giftWrap = input.giftWrap === true;
   const customer = validateCustomer(input.customer);
-  const shippingCents = Number(env.SHIPPING_AMOUNT_CENTS);
+  const shippingMethod = input.shippingMethod === undefined ? 'standard' : input.shippingMethod;
+  const shipping = SHIPPING_OPTIONS.find(option => option.id === shippingMethod);
+  if (!shipping) throw new PaymentError('invalid_shipping_method');
+  const shippingCents = shipping.amountCents;
   const subtotalCents = items.reduce((sum, item) => sum + item.quantity * item.unitPriceCents, 0);
   const totalCents = subtotalCents + shippingCents;
   if (!Number.isSafeInteger(totalCents) || totalCents < 1 || totalCents > 10000000) throw new PaymentError('invalid_total');
-  const fingerprint = await sha({ items, customer, shippingCents });
+  // Keep standard, unwrapped orders compatible with legacy fingerprints.
+  const fingerprint = await sha({ items, customer, shippingCents, ...(giftWrap ? { giftWrap: true } : {}), ...(shippingMethod === 'sedex' ? { shippingMethod } : {}) });
   let existing = await query(env.DB, 'SELECT * FROM payment_orders WHERE idempotency_key = ?', input.idempotencyKey).first();
   if (existing) {
     if (existing.fingerprint !== fingerprint) throw new PaymentError('idempotency_conflict', 409);
     const order = await refreshOrder(env, existing); background(ctx, deliverTracking(order, env));
     return json(publicOrder(order), order.status === 'processing' ? 202 : 200);
   }
-  const order = { id: crypto.randomUUID(), status: 'processing', items, customer, totalCents, subtotalCents, shippingCents, createdAt: new Date().toISOString(), tracking: clientTracking(input.tracking, origin), clientIp: clean(storefrontClientIp(request), 64), userAgent: clean(request.headers.get('user-agent'), 512) };
+  const order = { id: crypto.randomUUID(), status: 'processing', items, customer, totalCents, subtotalCents, shippingCents, giftWrap, shippingMethod, shippingLabel: shipping.label, shippingDeliveryEstimate: shipping.deliveryEstimate, createdAt: new Date().toISOString(), tracking: clientTracking(input.tracking, origin), clientIp: clean(storefrontClientIp(request), 64), userAgent: clean(request.headers.get('user-agent'), 512) };
   const inserted = await query(env.DB, 'INSERT OR IGNORE INTO payment_orders (id, idempotency_key, fingerprint, status, data_json, updated_at) VALUES (?, ?, ?, ?, ?, ?)', order.id, input.idempotencyKey, fingerprint, order.status, JSON.stringify(order), Date.now()).run();
   if (!changes(inserted)) {
     existing = await query(env.DB, 'SELECT * FROM payment_orders WHERE idempotency_key = ?', input.idempotencyKey).first();
@@ -198,7 +209,8 @@ async function checkout(request, env, ctx) {
     const mapped = [];
     for (const item of items) mapped.push(await productMapping(env, item, origin));
     const address = customer.address;
-    const payload = { amount: totalCents, offer_hash: mapped[0].offer_hash, payment_method: 'pix', installments: 1, customer: { name: customer.name, email: customer.email, phone_number: customer.phone, document: customer.document, street_name: address.street, number: address.number, complement: address.complement, neighborhood: address.neighborhood, city: address.city, state: address.state, zip_code: address.zipCode }, cart: items.map((item, index) => ({ product_hash: mapped[index].product_hash, title: `${item.name} — ${item.size}`, price: item.unitPriceCents, quantity: item.quantity, operation_type: 1, tangible: true })), transaction_origin: 'api', expire_in_days: 1, tracking: order.tracking.attribution, postback_url: new URL('/api/payment/postback', request.url).href };
+    const fulfillmentNote = ` | ${shipping.label}: ${shipping.deliveryEstimate}, ${shippingCents ? 'R$ 57,81' : 'grátis'}${giftWrap ? ' | Presente grátis' : ''}`;
+    const payload = { amount: totalCents, offer_hash: mapped[0].offer_hash, payment_method: 'pix', installments: 1, customer: { name: customer.name, email: customer.email, phone_number: customer.phone, document: customer.document, street_name: address.street, number: address.number, complement: address.complement, neighborhood: address.neighborhood, city: address.city, state: address.state, zip_code: address.zipCode }, cart: items.map((item, index) => ({ product_hash: mapped[index].product_hash, title: `${item.name} — ${item.size}${index === 0 ? fulfillmentNote : ''}`, price: item.unitPriceCents, quantity: item.quantity, operation_type: 1, tangible: true })), transaction_origin: 'api', expire_in_days: 1, tracking: order.tracking.attribution, postback_url: new URL('/api/payment/postback', request.url).href };
     dispatched = true;
     const transaction = await gateway(env, 'POST', '/transactions', payload);
     if (typeof transaction.hash !== 'string' || !/^[\w-]{1,100}$/.test(transaction.hash)) throw new PaymentError('gateway_uncertain', 502);

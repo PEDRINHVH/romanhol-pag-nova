@@ -3,6 +3,9 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import vm from 'node:vm';
 import {escapeHTML, money, priceOf} from '../public/catalog-utils.js';
+import {renderCheckoutItems, renderCheckoutGift, changeCheckoutCart} from '../public/checkout-cart.js';
+
+const shippingSource = readFileSync(new URL('../public/product-shipping.js', import.meta.url), 'utf8').replace(/\bexport /g, '');
 
 const source = readFileSync(new URL('../public/checkout.js', import.meta.url), 'utf8')
   .replace(/^import .*;\s*$/gm, '').replace(/\bexport /g, '')
@@ -16,21 +19,25 @@ function fixture({store=new Map(), fetch=async()=>response({paymentReady:true,sh
   const events=new Map(), timers=new Map(); let timerId=0, uuid=0, renders=0, html='', formVisible=true;
   let fields={...customerFields},fieldsetDisabled=false;
   const cart=[{id:'item',size:'M',qty:1}];
-  const products=[{id:'item',name:'Produto',model:'Produto',category:'acessorios',price:100}];
+  const products=[{id:'item',name:'Produto',model:'Produto',category:'acessorios',price:100,variants:[{size:'M'},{size:'G'}]}];
   const form={id:'pix-checkout',querySelector:selector=>selector==='fieldset:disabled'&&fieldsetDisabled?{}:null};
   const controls={'.checkout-submit':{dataset:{totalCents:'10000'}},'[data-config-error]':{},'[data-retry-config]':{hidden:true}};
   const sandbox={
-    e:escapeHTML,money,priceOf,console,URL,AbortController,__importQr:importQr,
+    e:escapeHTML,money,priceOf,renderCheckoutItems,renderCheckoutGift,changeCheckoutCart,console,URL,AbortController,__importQr:importQr,
     mountAddressAutofill:()=>()=>{},mountCheckoutValidation:()=>()=>{},validateCheckoutForm:()=>true,
     location:{hash:'#/checkout'}, navigator:{clipboard:{writeText:async()=>{}}},
     crypto:{randomUUID:()=>`test-key-${++uuid}-1234567890`},
     sessionStorage:{getItem:key=>store.get(key)||null,setItem:(key,value)=>store.set(key,value),removeItem:key=>store.delete(key)},
-    document:{querySelector:selector=>selector==='#pix-checkout'&&formVisible?form:formVisible?controls[selector]||null:null,
+    document:{querySelector:selector=>selector==='#pix-checkout'&&formVisible?form:controls[selector]||(/checkout-(?:items summary|empty a)|data-checkout-(?:gift|shipping)/.test(selector)?{focus(){}}:null),
+      querySelectorAll:()=>[],
       addEventListener:(type,handler)=>{const handlers=events.get(type)||[];handlers.push(handler);events.set(type,handlers);}},
     FormData:class {constructor(){return fieldsetDisabled?[]:Object.entries(fields);}},
     setTimeout:(fn,ms)=>{timers.set(++timerId,{fn,ms});return timerId;},clearTimeout:id=>timers.delete(id),
     fetch:(...args)=>fetch(...args)
   };
+  const shippingContext=vm.createContext({sessionStorage:sandbox.sessionStorage});
+  vm.runInContext(shippingSource,shippingContext);
+  Object.assign(sandbox,vm.runInContext('({SHIPPING_OPTIONS,getShippingQuote,getShippingMethod,updateShippingMethod})',shippingContext));
   const context=vm.createContext(sandbox);
   vm.runInContext(source,context);
   const evaluate=code=>vm.runInContext(code,context);
@@ -41,17 +48,18 @@ function fixture({store=new Map(), fetch=async()=>response({paymentReady:true,sh
     if(formVisible)fields=Object.fromEntries([...html.matchAll(/<input[^>]* name="([^"]+)" value="([^"]*)"/g)].map(([,name,value])=>[name,value]));
     return html;
   }
-  evaluate('configureCheckout')({getCart:()=>cart,getProducts:()=>products,render:()=>{renders++;page();},toast:()=>{},tracker:{track:()=>{},purchase:()=>{},getContext:()=>({consent:false})}});
+  evaluate('configureCheckout')({getCart:()=>cart,setCart:next=>cart.splice(0,cart.length,...next),getProducts:()=>products,render:()=>{renders++;page();},toast:()=>{},tracker:{track:()=>{},purchase:()=>{},getContext:()=>({consent:false})}});
   page();
   return {cart,store,page,evaluate,controls,
     get renders(){return renders;},get html(){return html;},
     setFields:next=>{fields={...next};},
-    state:()=>JSON.parse(evaluate('JSON.stringify({attempt,order,draft,busy,message})')),
+    state:()=>JSON.parse(evaluate('JSON.stringify({attempt,order,draft,busy,message,giftWrap,shippingMethod})')),
     ready:()=>evaluate('configured=true;config={paymentReady:true,shippingCents:0}'),
     mount:()=>evaluate('mountCheckout()'),
     poll:()=>evaluate('checkOrder()'),
     submit:async()=>{for(const handler of events.get('submit')||[])await handler({target:form,preventDefault(){}});},
-    click:async selector=>{for(const handler of events.get('click')||[])await handler({target:{closest:value=>value===selector?{}:null}});}
+    click:async (selector,dataset={})=>{for(const handler of events.get('click')||[])await handler({target:{closest:value=>value===selector?{dataset}:null}});},
+    change:async (selector,properties={})=>{for(const handler of events.get('change')||[])await handler({target:{matches:value=>value.split(',').includes(selector),...properties}});}
   };
 }
 
@@ -145,4 +153,69 @@ test('identical poll while QR module loads does not discard the generated image'
   await generating;
   assert.equal(f.evaluate('qrImage'),'data:image/png;base64,ready');
   assert.match(f.html,/src="data:image\/png;base64,ready"/);
+});
+
+test('summary quantity, size merge and removal preserve customer draft', async()=>{
+  const f=fixture();f.ready();
+  const edited={...customerFields,email:'edited@example.com',complement:'Apartamento 7'};
+  f.setFields(edited);
+  await f.click('button[data-checkout-action]',{checkoutAction:'increase',productId:'item',size:'M'});
+  assert.equal(f.cart[0].qty,2);
+  assert.deepEqual(f.state().draft,edited);
+  f.cart.push({id:'item',size:'G',qty:3});
+  await f.change('[data-checkout-action="size"]',{dataset:{productId:'item',size:'M'},value:'G'});
+  assert.equal(f.cart.length,1);assert.equal(f.cart[0].size,'G');assert.equal(f.cart[0].qty,5);
+  assert.match(f.html,/value="edited@example.com"/);
+  await f.click('button[data-checkout-action]',{checkoutAction:'decrease',productId:'item',size:'G'});
+  assert.equal(f.cart[0].qty,4);
+  await f.click('button[data-checkout-action]',{checkoutAction:'remove',productId:'item',size:'G'});
+  assert.equal(f.cart.length,0);
+  assert.match(f.html,/checkout-empty/);
+  assert.deepEqual(f.state().draft,edited);
+});
+
+test('gift and Sedex persist on reload, preserve fields and enter payment payload', async()=>{
+  const store=new Map(), requests=[];
+  const f=fixture({store});f.ready();f.setFields(customerFields);
+  await f.change('[data-checkout-gift]',{checked:true});
+  await f.change('[data-checkout-shipping]',{value:'sedex'});
+  assert.deepEqual(f.state().draft,customerFields);
+  assert.equal(f.state().giftWrap,true);assert.equal(f.state().shippingMethod,'sedex');
+  assert.match(f.html,/data-total-cents="15781"/);
+  assert.match(f.html,/Embalagem para presente<\/dt><dd class="free-shipping">Grátis/);
+  const reopened=fixture({store,fetch:async(path,options)=>{requests.push(JSON.parse(options.body));return response({...payment(),shippingCents:5781,totalCents:15781,giftWrap:true,shippingMethod:'sedex'});}});
+  reopened.ready();reopened.setFields(customerFields);
+  assert.equal(reopened.state().giftWrap,true);assert.equal(reopened.state().shippingMethod,'sedex');
+  assert.match(reopened.html,/data-total-cents="15781"/);
+  await reopened.submit();
+  assert.equal(requests[0].giftWrap,true);assert.equal(requests[0].shippingMethod,'sedex');
+  assert.equal(reopened.state().order.shippingCents,5781);
+  assert.equal(reopened.state().order.totalCents,15781);
+});
+
+test('invalid delivery and size events cannot change selections or discard fields', async()=>{
+  const f=fixture();f.ready();f.setFields(customerFields);
+  const before=JSON.stringify(f.cart);
+  await f.change('[data-checkout-shipping]',{value:'free-sedex'});
+  await f.change('[data-checkout-action="size"]',{dataset:{productId:'item',size:'M'},value:'XXL'});
+  assert.equal(f.state().shippingMethod,'standard');assert.equal(JSON.stringify(f.cart),before);
+  assert.deepEqual(f.state().draft,customerFields);
+});
+
+for(const lock of ['busy','orderRequest','orderId','order'])test(`cart and options reject programmatic edits when locked by ${lock}`,async()=>{
+  const f=fixture();f.ready();
+  const frozen={idempotencyKey:'frozen-key',signature:JSON.stringify([['item','M',1]])};
+  if(lock==='busy')f.evaluate('busy=true');
+  else if(lock==='order')f.evaluate(`order=${JSON.stringify(payment())}`);
+  else f.evaluate(`attempt=${JSON.stringify({...frozen,[lock]:lock==='orderId'?'existing-order':{giftWrap:false,shippingMethod:'standard'}})}`);
+  f.page();
+  assert.match(f.html,/<fieldset class="checkout-delivery" disabled/);
+  assert.match(f.html,/data-checkout-gift disabled/);
+  const before=JSON.stringify(f.cart);
+  await f.click('button[data-checkout-action]',{checkoutAction:'remove',productId:'item',size:'M'});
+  await f.change('[data-checkout-action="size"]',{dataset:{productId:'item',size:'M'},value:'G'});
+  await f.change('[data-checkout-gift]',{checked:true});
+  await f.change('[data-checkout-shipping]',{value:'sedex'});
+  assert.equal(JSON.stringify(f.cart),before);
+  assert.equal(f.state().giftWrap,false);assert.equal(f.state().shippingMethod,'standard');
 });

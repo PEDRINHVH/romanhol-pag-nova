@@ -163,6 +163,29 @@
 }
 .consent-actions button:not(:first-child):hover { background: var(--light, #f4f7fb); }
 
+/* Compact order editing, with full-size touch controls. */
+.checkout-cart-item { grid-template-columns: 52px minmax(0, 1fr); gap: 10px 12px; padding: 16px 0; }
+.checkout-cart-item .checkout-thumb { grid-column: 1; grid-row: 1; width: 52px; height: 60px; }
+.checkout-cart-description { grid-column: 2; min-width: 0; }
+.checkout-cart-description h3 { font-family: Sora, sans-serif; overflow-wrap: anywhere; }
+.checkout-cart-price { display: block; margin-top: 6px; font-size: 14px; }
+.checkout-cart-controls { grid-column: 1 / -1; display: flex; align-items: end; gap: 8px; flex-wrap: wrap; min-width: 0; }
+.checkout-cart-size { display: grid; gap: 4px; min-width: 64px; max-width: 100%; flex: 1 1 64px; font-size: 11px; }
+.checkout-cart-size select { box-sizing: border-box; width: 100%; min-width: 0; min-height: 44px; padding: 8px; font: 16px Inter, sans-serif; border: 1px solid var(--line, #e3e8ef); border-radius: 10px; color: var(--ink, #101820); background: #fff; }
+.checkout-cart-controls button { box-sizing: border-box; min-width: 44px; min-height: 44px; padding: 8px; font: 14px Inter, sans-serif; border: 1px solid var(--line, #e3e8ef); border-radius: 10px; color: var(--blue, #265cff); background: #fff; cursor: pointer; }
+.checkout-cart-quantity { display: flex; align-items: center; flex: 0 0 auto; }
+.checkout-cart-quantity > span { min-width: 24px; text-align: center; font-size: 13px; }
+.checkout-cart-controls [data-checkout-action="remove"] { font-size: 11px; padding-inline: 6px; border-color: transparent; background: transparent; text-decoration: underline; text-underline-offset: 3px; }
+.checkout-cart-controls :disabled { opacity: .5; cursor: not-allowed; }
+.checkout-page :is(select, input):focus-visible { outline: 2px solid var(--blue, #265cff); outline-offset: 3px; }
+.checkout-gift { padding: 14px 0; border-bottom: 1px solid var(--line, #e3e8ef); }
+.checkout-gift label { display: flex; align-items: center; min-height: 44px; gap: 10px; cursor: pointer; font-size: 13px; }
+.checkout-gift input { flex: 0 0 20px; width: 20px; height: 20px; margin: 0; accent-color: var(--blue, #265cff); }
+.checkout-gift label > span { min-width: 0; }
+.checkout-gift strong { display: inline-block; margin-left: 4px; color: var(--blue, #265cff); font-size: 11px; }
+.checkout-gift p { margin: 0 0 0 30px; color: var(--muted, #526170); font-size: 11px; line-height: 1.5; }
+.checkout-gift:has(input:disabled) label { opacity: .6; cursor: not-allowed; }
+
 @media (max-width: 380px) {
   .checkout-section-title { flex-wrap: wrap; }
   .checkout-section-title h2 { max-width: 100%; }
@@ -172,3 +195,17 @@
   .checkout-totals > div { gap: 12px; flex-wrap: wrap; }
   .checkout-breadcrumb { flex-wrap: wrap; }
 }
+.checkout-summary > .checkout-section-title { flex-wrap: wrap; }
+.checkout-summary > .checkout-section-title > a { margin-left: auto; }
+.checkout-delivery { min-width: 0; padding: 0; margin: 20px 0 0; border: 0; }
+.checkout-delivery legend { margin-bottom: 10px; font-size: 14px; font-weight: 600; }
+.checkout-delivery label { display: flex; align-items: center; gap: 10px; min-height: 64px; padding: 12px; margin-bottom: 8px; background: #fff; border: 1px solid var(--line, #e3e8ef); border-radius: 16px; cursor: pointer; }
+.checkout-delivery label:has(input:checked) { border-color: var(--blue, #265cff); background: #edf2ff; }
+.checkout-delivery input { flex: 0 0 18px; width: 18px; height: 18px; margin: 0; accent-color: var(--blue, #265cff); }
+.checkout-delivery label > span { display: grid; gap: 4px; min-width: 0; }
+.checkout-delivery strong, .checkout-delivery b { font-size: 13px; }
+.checkout-delivery small { color: var(--muted, #526170); font-size: 12px; }
+.checkout-delivery b { margin-left: auto; white-space: nowrap; }
+.checkout-delivery:disabled label { cursor: default; }
+.checkout-delivery input:focus-visible { outline: 2px solid var(--blue, #265cff); outline-offset: 4px; }
+.checkout-cart-locked { color: var(--muted, #526170); font-size: 12px; line-height: 1.5; margin: 14px 0 0; }

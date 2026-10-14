@@ -3,7 +3,7 @@ import { DatabaseSync } from 'node:sqlite';
 import { mkdirSync, readFileSync, existsSync, readdirSync, createReadStream } from 'node:fs';
 import { stat } from 'node:fs/promises';
 import { resolve, extname, sep } from 'node:path';
-import { handlePaymentRequest } from '../worker/payments.mjs';
+import { handlePaymentRequest, SHIPPING_OPTIONS } from '../worker/payments.mjs';
 import { handleTrackingRequest } from '../worker/tracking.mjs';
 
 const root = resolve(import.meta.dirname, '..');
@@ -29,8 +29,7 @@ createServer(async(req,res)=>{
       let response=await handlePaymentRequest(request,env,{waitUntil:p=>p.catch(()=>console.error('Background tracking retry deferred'))});
       if (!response && url.pathname==='/api/events') response=await handleTrackingRequest(request,env);
       if (!response && url.pathname==='/api/config') {
-        const raw=env.SHIPPING_AMOUNT_CENTS; const shippingCents=raw!==undefined&&raw!==''&&Number.isSafeInteger(Number(raw))&&Number(raw)>=0?Number(raw):null;
-        response=Response.json({paymentReady:Boolean(env.PAYMENT_API_TOKEN&&shippingCents!==null),shippingCents,pixelId:env.META_PIXEL_ID||''},{headers:{'cache-control':'no-store'}});
+        response=Response.json({paymentReady:Boolean(env.PAYMENT_API_TOKEN),shippingCents:0,shippingOptions:SHIPPING_OPTIONS,pixelId:env.META_PIXEL_ID||''},{headers:{'cache-control':'no-store'}});
       }
       response??=Response.json({error:'not_found'},{status:404});
       res.writeHead(response.status,Object.fromEntries(response.headers));res.end(Buffer.from(await response.arrayBuffer()));return;

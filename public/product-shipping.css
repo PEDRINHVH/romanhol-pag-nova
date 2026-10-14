@@ -1,0 +1,20 @@
+.product-shipping { margin-top: 20px; padding: 18px; border: 1px solid var(--line, #e3e8ef); border-radius: 24px; background: var(--light, #f4f7fb); color: var(--ink, #101820); font-family: Inter, sans-serif; }
+.product-shipping__title { display: block; margin-bottom: 10px; font-family: Sora, sans-serif; font-size: 14px; font-weight: 700; }
+.product-shipping__controls { display: flex; gap: 8px; }
+.product-shipping__controls input { box-sizing: border-box; min-width: 0; width: 100%; min-height: 44px; padding: 10px 12px; border: 1px solid var(--line, #e3e8ef); border-radius: 16px; background: #fff; color: var(--ink, #101820); font: inherit; font-size: 16px; }
+.product-shipping__controls button { flex-shrink: 0; min-height: 44px; padding: 10px 14px; border: 0; border-radius: 999px; color: #fff; background: var(--blue, #265cff); font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; }
+.product-shipping__controls button:disabled { opacity: .65; cursor: wait; }
+.product-shipping :focus-visible { outline: 3px solid var(--blue, #265cff); outline-offset: 3px; }
+.product-shipping__status { margin: 8px 0 0; color: var(--muted, #526170); font-size: 12px; line-height: 1.5; }
+.product-shipping__status:empty { display: none; }
+.product-shipping__success { margin: 14px 0 5px; font-family: Sora, sans-serif; font-size: 15px; font-weight: 800; color: var(--blue, #265cff); }
+.product-shipping__address { margin: 0 0 12px; color: var(--muted, #526170); font-size: 12px; line-height: 1.5; overflow-wrap: anywhere; }
+.product-shipping__options { min-width: 0; margin: 0; padding: 0; border: 0; }
+.product-shipping__options legend { padding: 0; margin-bottom: 6px; font-size: 12px; font-weight: 600; }
+.product-shipping__option { display: flex; align-items: center; gap: 9px; min-height: 54px; margin-top: 6px; padding: 8px 10px; border: 1px solid var(--line, #e3e8ef); border-radius: 16px; background: #fff; cursor: pointer; }
+.product-shipping__option:has(input:checked) { border-color: var(--blue, #265cff); background: var(--light, #f4f7fb); }
+.product-shipping__option input { margin: 0; width: 18px; height: 18px; accent-color: var(--blue, #265cff); }
+.product-shipping__option span { flex: 1; }
+.product-shipping__option strong, .product-shipping__option b { font-size: 13px; }
+.product-shipping__option small { display: block; margin-top: 3px; font-size: 11px; }
+@media (max-width: 360px) { .product-shipping { padding: 12px; } .product-shipping__controls button { padding-inline: 10px; font-size: 12px; } }

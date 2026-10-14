@@ -48,7 +48,7 @@ test('trusted catalogue overrides tampered prices and validates variants, availa
   assert.equal(other.unitPriceCents, 21041);
 });
 
-test('checkout validates CPF, customer/address, origin and explicit shipping configuration before dispatch', async () => {
+test('checkout validates CPF, customer/address, origin and payment credentials before dispatch', async () => {
   const f = fixture();
   assert.equal(validCPF(customer.document), true);
   assert.equal(validCPF('11111111111'), false);
@@ -58,7 +58,7 @@ test('checkout validates CPF, customer/address, origin and explicit shipping con
   assert.equal((await f.request('/api/checkout', bad)).status, 400);
   const response = await handlePaymentRequest(new Request(origin + '/api/checkout', { method: 'POST', headers: { origin: 'https://evil.example', 'content-type': 'application/json' }, body: JSON.stringify(input()) }), f.env, {});
   assert.equal(response.status, 403);
-  delete f.env.SHIPPING_AMOUNT_CENTS;
+  delete f.env.PAYMENT_API_TOKEN;
   assert.equal((await f.request('/api/checkout', input())).status, 503);
   assert.equal(f.state.posts.length, 0);
 });
@@ -117,6 +117,141 @@ test('idempotency returns same order once and rejects a changed cart', async () 
   assert.equal(f.state.posts.length, 1);
 });
 
+test('gift wrapping is free, persists through recovery and is readable in the documented provider title', async () => {
+  const f = fixture(); const body = { ...input(), giftWrap: true };
+  const first = await f.request('/api/checkout', body);
+  assert.equal(first.status, 201);
+  assert.equal(first.body.giftWrap, true);
+  assert.equal(first.body.subtotalCents, 17990);
+  assert.equal(first.body.shippingCents, 0);
+  assert.equal(first.body.totalCents, 17990);
+  assert.equal(f.state.posts[0].amount, 17990);
+  assert.ok(f.state.posts[0].cart[0].title.endsWith(' | Correios: 4–8 dias úteis, grátis | Presente grátis'));
+  assert.equal(f.state.posts[0].metadata, undefined);
+  const saved = JSON.parse(f.sqlite.prepare('SELECT data_json FROM payment_orders WHERE id = ?').get(first.body.id).data_json);
+  assert.equal(saved.giftWrap, true);
+  const repeated = await f.request('/api/checkout', body);
+  assert.equal(repeated.body.id, first.body.id);
+  assert.equal(repeated.body.giftWrap, true);
+  f.state.status = 'paid'; f.tick();
+  const recovered = await f.request('/api/orders/' + first.body.id);
+  assert.equal(recovered.body.status, 'paid');
+  assert.equal(recovered.body.giftWrap, true);
+  assert.equal(f.state.posts.length, 1);
+  const changed = await f.request('/api/checkout', { ...body, giftWrap: false });
+  assert.equal(changed.status, 409);
+});
+
+test('omitted and false gift wrapping preserve legacy orders and idempotency', async () => {
+  const f = fixture(); const body = input();
+  const first = await f.request('/api/checkout', body);
+  assert.equal(first.body.giftWrap, false);
+  assert.equal(f.state.posts[0].cart[0].title.includes('Presente'), false);
+  const saved = JSON.parse(f.sqlite.prepare('SELECT data_json FROM payment_orders WHERE id = ?').get(first.body.id).data_json);
+  delete saved.giftWrap;
+  delete saved.shippingMethod;
+  delete saved.shippingLabel;
+  delete saved.shippingDeliveryEstimate;
+  const legacyBytes = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(JSON.stringify({ items: saved.items, customer: saved.customer, shippingCents: saved.shippingCents })));
+  const legacyFingerprint = Buffer.from(legacyBytes).toString('hex');
+  f.sqlite.prepare('UPDATE payment_orders SET data_json = ?, fingerprint = ? WHERE id = ?').run(JSON.stringify(saved), legacyFingerprint, first.body.id);
+  assert.equal((await f.request('/api/orders/' + first.body.id)).body.giftWrap, false);
+  const repeated = await f.request('/api/checkout', { ...body, giftWrap: false });
+  assert.equal(repeated.status, 200);
+  assert.equal(repeated.body.id, first.body.id);
+  assert.equal(repeated.body.giftWrap, false);
+  assert.equal(repeated.body.shippingMethod, 'standard');
+  assert.equal(repeated.body.shippingDeliveryEstimate, '4–8 dias úteis');
+  assert.equal((await f.request('/api/checkout', { ...body, giftWrap: true })).status, 409);
+  assert.equal(f.state.posts.length, 1);
+});
+
+test('gift wrapping rejects non-boolean flags before creating an order or dispatching payment', async () => {
+  const f = fixture();
+  for (const giftWrap of [null, 0, 1, '', 'true', 'false', {}, []]) {
+    const result = await f.request('/api/checkout', { ...input(), giftWrap });
+    assert.equal(result.status, 400);
+    assert.equal(result.body.error, 'invalid_gift_wrap');
+  }
+  assert.equal(f.state.posts.length, 0);
+  assert.equal(f.sqlite.prepare('SELECT COUNT(*) AS count FROM payment_orders').get().count, 0);
+});
+
+test('Sedex charges the fixed server fee and persists shipping with free gift wrapping', async () => {
+  const f = fixture();
+  f.state.amount = f.state.createAmount = 23771;
+  const body = { ...input(), shippingMethod: 'sedex', shippingCents: 1, giftWrap: true };
+  const first = await f.request('/api/checkout', body);
+  assert.equal(first.status, 201);
+  assert.equal(first.body.shippingMethod, 'sedex');
+  assert.equal(first.body.shippingLabel, 'Sedex');
+  assert.equal(first.body.shippingDeliveryEstimate, '2–4 dias úteis');
+  assert.equal(first.body.subtotalCents, 17990);
+  assert.equal(first.body.shippingCents, 5781);
+  assert.equal(first.body.totalCents, 23771);
+  assert.equal(first.body.giftWrap, true);
+  assert.ok(first.body.pix.code);
+  assert.equal(f.state.posts[0].amount, 23771);
+  assert.equal(f.state.posts[0].cart[0].price, 17990);
+  assert.ok(f.state.posts[0].cart[0].title.endsWith(' | Sedex: 2–4 dias úteis, R$ 57,81 | Presente grátis'));
+  assert.equal(f.state.posts[0].metadata, undefined);
+  const saved = JSON.parse(f.sqlite.prepare('SELECT data_json FROM payment_orders WHERE id = ?').get(first.body.id).data_json);
+  assert.equal(saved.shippingMethod, 'sedex');
+  assert.equal(saved.shippingCents, 5781);
+  assert.equal(saved.shippingDeliveryEstimate, '2–4 dias úteis');
+  assert.equal((await f.request('/api/checkout', body)).body.id, first.body.id);
+  f.state.status = 'paid'; f.tick();
+  const recovered = await f.request('/api/orders/' + first.body.id);
+  assert.equal(recovered.body.status, 'paid');
+  assert.equal(recovered.body.shippingMethod, 'sedex');
+  assert.equal(recovered.body.totalCents, 23771);
+  assert.equal((await f.request('/api/checkout', { ...body, shippingMethod: 'standard' })).status, 409);
+  assert.equal(f.state.posts.length, 1);
+});
+
+test('standard shipping stays free without environment fees and ignores client fee overrides', async () => {
+  for (const configuredFee of [undefined, '99999', 'invalid']) {
+    const f = fixture(); f.env.SHIPPING_AMOUNT_CENTS = configuredFee;
+    const body = { ...input(), shippingCents: 99999 };
+    const first = await f.request('/api/checkout', body);
+    assert.equal(first.status, 201);
+    assert.equal(first.body.shippingMethod, 'standard');
+    assert.equal(first.body.shippingLabel, 'Correios');
+    assert.equal(first.body.shippingDeliveryEstimate, '4–8 dias úteis');
+    assert.equal(first.body.shippingCents, 0);
+    assert.equal(first.body.totalCents, 17990);
+    assert.equal(f.state.posts[0].amount, 17990);
+    assert.ok(f.state.posts[0].cart[0].title.endsWith(' | Correios: 4–8 dias úteis, grátis'));
+    assert.equal((await f.request('/api/checkout', { ...body, shippingMethod: 'standard' })).body.id, first.body.id);
+    assert.equal((await f.request('/api/checkout', { ...body, shippingMethod: 'sedex' })).status, 409);
+    assert.equal(f.state.posts.length, 1);
+  }
+});
+
+test('provider fulfillment instructions appear only on the first cart item', async () => {
+  const f = fixture();
+  f.state.amount = f.state.createAmount = 35980;
+  const body = { ...input(), giftWrap: true };
+  body.items.push({ id: '394', size: '60/L', quantity: 1 });
+  const result = await f.request('/api/checkout', body);
+  assert.equal(result.status, 201);
+  const sent = f.state.posts[0];
+  assert.ok(sent.cart[0].title.endsWith(' | Correios: 4–8 dias úteis, grátis | Presente grátis'));
+  assert.equal(sent.cart[1].title, result.body.items[1].name + ' — 60/L');
+  assert.equal(sent.metadata, undefined);
+});
+
+test('shipping method validation rejects unknown and non-string values before dispatch', async () => {
+  const f = fixture();
+  for (const shippingMethod of [null, false, 0, '', 'express', 'Sedex', {}, ['sedex']]) {
+    const result = await f.request('/api/checkout', { ...input(), shippingMethod });
+    assert.equal(result.status, 400);
+    assert.equal(result.body.error, 'invalid_shipping_method');
+  }
+  assert.equal(f.state.posts.length, 0);
+  assert.equal(f.sqlite.prepare('SELECT COUNT(*) AS count FROM payment_orders').get().count, 0);
+});
+
 test('concurrent requests sharing one idempotency key dispatch only one payment', async () => {
   const f = fixture(); const body = input();
   const results = await Promise.all([f.request('/api/checkout', body), f.request('/api/checkout', body)]);
@@ -170,12 +305,15 @@ test('ambiguous product registration recovers unique existing product through re
 });
 
 test('ambiguous POST timeout is persisted and never dispatched again', async () => {
-  const f = fixture(); f.state.timeout = true; const body = input();
+  const f = fixture(); f.state.timeout = true; const body = { ...input(), giftWrap: true, shippingMethod: 'sedex' };
   const first = await f.request('/api/checkout', body);
   assert.equal(first.status, 503);
   assert.equal(first.body.status, 'payment_uncertain');
-  await f.request('/api/checkout', body);
-  await f.request('/api/orders/' + first.body.id);
+  assert.equal(first.body.shippingMethod, 'sedex');
+  assert.equal(first.body.totalCents, 23771);
+  assert.equal(first.body.giftWrap, true);
+  assert.equal((await f.request('/api/checkout', body)).body.giftWrap, true);
+  assert.equal((await f.request('/api/orders/' + first.body.id)).body.giftWrap, true);
   assert.equal(f.state.posts.length, 1);
 });
 
