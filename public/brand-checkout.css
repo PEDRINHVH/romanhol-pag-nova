@@ -1,0 +1,174 @@
+/* Asa Clean 2.0 — load after checkout.css and the shared brand tokens. */
+.checkout-page,
+.checkout-empty,
+.consent-banner {
+  color: var(--ink, #101820);
+  font-family: Inter, sans-serif;
+}
+
+.checkout-heading h1,
+.checkout-section-title h2,
+.pix-result h2,
+.checkout-empty h1 {
+  font-family: Sora, sans-serif;
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: -.035em;
+}
+
+.checkout-panel,
+.checkout-summary,
+.consent-banner {
+  min-width: 0;
+  background: var(--white, #fff);
+  border-color: var(--line, #e3e8ef);
+  border-radius: var(--radius-card, 24px);
+  box-shadow: 0 4px 20px #10182005;
+}
+
+.checkout-summary { background: var(--light, #f4f7fb); }
+.checkout-heading strong { color: var(--ink, #101820); }
+.checkout-breadcrumb,
+.checkout-heading p,
+.checkout-section-note,
+.checkout-field span,
+.checkout-method div span,
+.checkout-item p,
+.checkout-privacy,
+.checkout-protection,
+.pix-result > p,
+.pix-code-details,
+.pix-only-note span,
+.pix-price-note,
+.checkout-items > summary span,
+.consent-banner p { color: var(--muted, #526170); }
+
+.checkout-page a,
+.checkout-page .text-link,
+.consent-banner p a { color: var(--blue, #265cff); }
+
+.checkout-page a:hover,
+.checkout-page .text-link:hover,
+.consent-banner p a:hover { color: var(--blue-hover, #1749db); }
+
+.step-number { background: var(--blue, #265cff); }
+.delivery-title,
+.checkout-item,
+.checkout-items > summary,
+.checkout-totals .checkout-total { border-color: var(--line, #e3e8ef); }
+
+.checkout-field input,
+.pix-code-details textarea {
+  box-sizing: border-box;
+  min-height: 48px;
+  border-color: var(--line, #e3e8ef);
+  border-radius: var(--radius-field, 16px);
+  background: var(--white, #fff);
+  color: var(--ink, #101820);
+  font-family: Inter, sans-serif;
+  font-size: 16px;
+}
+
+.checkout-field input::placeholder { color: var(--muted, #526170); }
+.checkout-field input:focus {
+  border-color: var(--blue, #265cff);
+  outline: 2px solid var(--blue, #265cff);
+  outline-offset: 3px;
+  box-shadow: none;
+}
+
+.checkout-page :is(a, button, summary, textarea):focus-visible,
+.checkout-empty a:focus-visible,
+.consent-banner :is(a, button):focus-visible,
+.privacy-settings:focus-visible {
+  outline: 2px solid var(--blue, #265cff);
+  outline-offset: 3px;
+}
+
+.checkout-fields-group:disabled input {
+  background: var(--light, #f4f7fb);
+  color: var(--muted, #526170);
+}
+
+.checkout-method {
+  background: var(--white, #fff);
+  border-color: var(--line, #e3e8ef);
+  border-radius: var(--radius-field, 16px);
+}
+
+.checkout-thumb {
+  background: var(--white, #fff);
+  border-radius: var(--radius-field, 16px);
+}
+
+.checkout-page .button,
+.checkout-empty .button,
+.consent-actions button {
+  min-height: 48px;
+  border-radius: var(--radius-pill, 999px);
+  font-family: Inter, sans-serif;
+  font-weight: 600;
+  line-height: 1.45;
+  white-space: normal;
+}
+
+.checkout-page .button-dark,
+.checkout-empty .button-dark,
+.consent-actions button:first-child {
+  background: var(--blue, #265cff);
+  border-color: var(--blue, #265cff);
+  color: var(--white, #fff);
+}
+
+.checkout-page .button-dark:hover:not(:disabled),
+.checkout-empty .button-dark:hover,
+.consent-actions button:first-child:hover {
+  background: var(--blue-hover, #1749db);
+  border-color: var(--blue-hover, #1749db);
+  color: var(--white, #fff);
+}
+
+.checkout-page .text-link,
+.checkout-items > summary,
+.pix-code-details summary { min-height: 48px; }
+.checkout-submit { min-height: 54px; }
+.checkout-total dd,
+.pix-amount { color: var(--ink, #101820); font-weight: 600; }
+.pix-only-note { background: transparent; border-color: var(--blue, #265cff); }
+.pix-qr {
+  box-sizing: border-box;
+  background: #fff;
+  border-color: var(--line, #e3e8ef);
+  border-radius: var(--radius-field, 16px);
+}
+.pix-qr img { height: auto; }
+.pix-result-mark:has(.pix-method-logo) { background: transparent; }
+.checkout-recovery {
+  background: var(--light, #f4f7fb);
+  border-color: var(--blue, #265cff);
+  border-radius: var(--radius-field, 16px);
+  color: var(--muted, #526170);
+}
+
+/* Keep validation and payment status semantic, including result paragraphs. */
+.checkout-field input[aria-invalid="true"] { border-color: #b42318; }
+.checkout-field-error,
+.checkout-error,
+.pix-result > .checkout-error { color: #b42318; }
+.consent-actions { flex-wrap: wrap; }
+.consent-actions button {
+  background: var(--white, #fff);
+  border-color: var(--line, #e3e8ef);
+  color: var(--ink, #101820);
+}
+.consent-actions button:not(:first-child):hover { background: var(--light, #f4f7fb); }
+
+@media (max-width: 380px) {
+  .checkout-section-title { flex-wrap: wrap; }
+  .checkout-section-title h2 { max-width: 100%; }
+  .checkout-method { flex-wrap: wrap; }
+  .checkout-method > div { flex: 1 1 100px; }
+  .checkout-page .button { padding-inline: 16px; }
+  .checkout-totals > div { gap: 12px; flex-wrap: wrap; }
+  .checkout-breadcrumb { flex-wrap: wrap; }
+}

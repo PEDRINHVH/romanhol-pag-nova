@@ -2,6 +2,8 @@
 
 Loja responsiva em português, com 399 produtos e 1.421 variações do catálogo público da Norisk. A marca da loja é **No Limite**. Por decisão do proprietário, as fotografias preservam a marca Norisk original e são apresentadas com fundo transparente.
 
+A interface segue o manual **Asa Clean 2.0**: arquivos mestres da marca em `public/assets/brand/no-limite-*`, estilos compartilhados em `public/brand.css` e ajustes do checkout em `public/brand-checkout.css`. Essas camadas são carregadas após os estilos funcionais e usam as fontes locais Sora e Inter.
+
 ## Executar
 
 Execute `npm ci` e `npm run preview:local`, depois abra `http://127.0.0.1:5173`. O preview usa o mesmo backend de pagamentos, SQLite persistente em `.local/` e credenciais de `.env.local`. A UTMify recebe pedidos de teste nesse preview; a geração do Pix é real e não executa pagamento.
