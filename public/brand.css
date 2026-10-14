@@ -118,6 +118,7 @@ a, button, input, select, textarea, summary { scroll-margin-block: 24px; }
 .model-tile:hover { background: var(--white); color: var(--ink); border-color: var(--blue); }
 .model-tile > svg { color: var(--blue); }
 .section.storefront-section { padding-top: 0; }
+.storefront-badge { display: block; width: 100%; height: auto; margin-bottom: 16px; }
 .storefront-photo { margin: 0; overflow: hidden; border: 1px solid var(--line); border-radius: var(--radius-card); background: var(--light); }
 .storefront-photo img { display: block; width: 100%; height: auto; }
 .guide-teaser { margin-top: 16px; margin-bottom: 56px; padding: 32px; background: var(--light); border: 1px solid var(--line); border-radius: var(--radius-card); }
