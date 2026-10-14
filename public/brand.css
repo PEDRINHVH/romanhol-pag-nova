@@ -55,7 +55,21 @@ a, button, input, select, textarea, summary { scroll-margin-block: 24px; }
 .category-nav a:hover { color: var(--blue); }
 .header-actions .icon-button:hover { background: var(--light); }
 
-.hero { background: var(--light); color: var(--ink); }
+.hero {
+  isolation: isolate;
+  background: linear-gradient(110deg, var(--light) 36%, #e8efff 70%, #dce6ff);
+  color: var(--ink);
+}
+.hero::before, .hero::after { content: ""; position: absolute; inset: 0; pointer-events: none; }
+.hero::before {
+  background: url("/assets/brand/no-limite-simbolo-cor.svg") no-repeat calc(50% + 330px) 46% / 850px auto;
+  opacity: .14;
+}
+.hero::after {
+  left: 58%;
+  background: linear-gradient(145deg, transparent 54%, var(--blue) 54.2%, var(--blue) 64%, transparent 64.2%, transparent 70%, var(--blue) 70.2%, var(--blue) 70.7%, transparent 70.9%);
+  opacity: .8;
+}
 .hero-inner { max-width: 1200px; min-height: 420px; gap: 40px; }
 .hero-copy { padding: 48px 0; }
 .hero-copy > .eyebrow { color: var(--blue); font-size: 12px; letter-spacing: 1.6px; }
@@ -69,7 +83,7 @@ a, button, input, select, textarea, summary { scroll-margin-block: 24px; }
 .hero .button:hover { background: var(--blue-hover); }
 .hero-visual { height: 370px; }
 .hero-product-stage { height: 370px; max-height: 370px; }
-.hero-product-stage > img { object-fit: contain; }
+.hero-product-stage > img { object-fit: contain; filter: drop-shadow(0 18px 16px #1b263326); }
 .section { padding-block: 56px; }
 .section-heading { margin-bottom: 24px; }
 .section-heading h2 { font-size: 28px; font-weight: 600; }
@@ -167,6 +181,9 @@ a, button, input, select, textarea, summary { scroll-margin-block: 24px; }
   .header-actions .icon-button { min-width: 48px; min-height: 48px; }
   .search { margin-top: 0; }
   .category-nav { gap: 24px; }
+  .hero { background: linear-gradient(105deg, var(--light) 40%, #e8efff 72%, #dce6ff); }
+  .hero::before { background-size: 440px auto; background-position: calc(100% + 140px) 48%; opacity: .12; }
+  .hero::after { left: 60%; opacity: .65; }
   .hero-inner { min-height: 300px; grid-template-columns: minmax(0, 1.1fr) minmax(0, .9fr); gap: 0; }
   .hero-copy { padding: 28px 0; }
   .hero-copy > .eyebrow { font-size: 10px; letter-spacing: 1px; }
