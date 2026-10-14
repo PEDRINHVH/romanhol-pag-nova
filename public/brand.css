@@ -110,6 +110,9 @@ a, button, input, select, textarea, summary { scroll-margin-block: 24px; }
 .model-tile { padding: 16px; border: 1px solid var(--line); border-radius: var(--radius-card); background: var(--light); }
 .model-tile:hover { background: var(--white); color: var(--ink); border-color: var(--blue); }
 .model-tile > svg { color: var(--blue); }
+.section.storefront-section { padding-top: 0; }
+.storefront-photo { margin: 0; overflow: hidden; border: 1px solid var(--line); border-radius: var(--radius-card); background: var(--light); }
+.storefront-photo img { display: block; width: 100%; height: auto; }
 .guide-teaser { margin-top: 16px; margin-bottom: 56px; padding: 32px; background: var(--light); border: 1px solid var(--line); border-radius: var(--radius-card); }
 .guide-teaser h2 { font-weight: 600; }
 .site-footer { background: var(--ink); }
