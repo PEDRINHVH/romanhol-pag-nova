@@ -40,6 +40,7 @@ a, button, input, select, textarea, summary { scroll-margin-block: 24px; }
   background: var(--light); color: var(--muted); border-color: var(--line); transform: none;
 }
 .icon-button, .product-go { min-width: 48px; min-height: 48px; border-radius: var(--radius-pill); }
+.bag-button .cart-count { position: absolute; top: 0; right: 0; display: inline-flex; align-items: center; justify-content: center; width: auto; min-width: 22px; height: 22px; padding: 0 5px; border: 2px solid var(--white); border-radius: var(--radius-pill); background: var(--blue); color: var(--white); font: 600 11px/1 Inter,sans-serif; font-variant-numeric: tabular-nums; text-align: center; white-space: nowrap; pointer-events: none; }
 .text-link { color: var(--blue); }
 .text-link:hover { color: var(--blue-hover); }
 .announcement { background: var(--light); color: var(--muted); border-bottom: 1px solid var(--line); }
